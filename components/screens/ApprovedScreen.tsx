@@ -1,0 +1,177 @@
+'use client';
+
+import { motion } from 'framer-motion';
+import { useState } from 'react';
+import type { EmiOption } from '@/lib/types';
+import { useApp } from '@/lib/client/state';
+import { formatINR, formatShortDate } from '@/lib/format';
+import { addMonths } from '@/lib/dates';
+import { AppBar, Pill, StatusBar } from '../Chrome';
+
+export function ApprovedScreen() {
+  const { decision, amount, merchant, confirmCredit, go } = useApp();
+  const offer = decision?.offer;
+
+  const [selected, setSelected] = useState<number>(() => {
+    const preferred = offer?.tenures.find((tenure) => tenure.noCost) ?? offer?.tenures[0];
+    return preferred?.months ?? 3;
+  });
+
+  if (!offer || !decision) return null;
+
+  const tenure = offer.tenures.find((option) => option.months === selected) ?? offer.tenures[0];
+
+  return (
+    <div className="flex h-full flex-col">
+      <StatusBar />
+      <AppBar title="Set up in one tap" onBack={() => go('checkout')} />
+
+      <div className="scroll-slim flex-1 overflow-y-auto px-5 pb-4">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="rounded-2xl border border-brand/25 bg-gradient-to-b from-[#0d2a4a] to-surface p-5 text-center"
+        >
+          <Pill tone="brand">Pre-approved</Pill>
+          <h2 className="mt-3 text-[20px] font-semibold leading-tight text-white">
+            You&rsquo;re approved for
+            <br />
+            {offer.partner}
+          </h2>
+          <p className="mt-2 text-[12px] text-muted">
+            Credit limit up to <span className="font-semibold text-body">{formatINR(offer.limit)}</span>
+          </p>
+        </motion.div>
+
+        <h3 className="mb-2 mt-5 text-[12px] font-semibold uppercase tracking-wide text-muted">
+          Choose a plan
+        </h3>
+
+        <div className="space-y-2">
+          {offer.tenures.map((option) => (
+            <PlanRow
+              key={option.months}
+              option={option}
+              amount={amount}
+              selected={option.months === selected}
+              onSelect={() => setSelected(option.months)}
+            />
+          ))}
+        </div>
+
+        <Schedule tenure={tenure} />
+
+        <p className="mt-4 rounded-xl border border-line bg-surface/60 p-3 text-[10px] leading-relaxed text-faint">
+          Activation, KYC and the credit line itself are issued by the partner bank. In this
+          prototype that step is mocked — the decision layer is what we built.
+        </p>
+      </div>
+
+      <div className="shrink-0 space-y-2 border-t border-line px-5 py-4">
+        <div className="flex items-baseline justify-between text-[12px]">
+          <span className="text-muted">You&rsquo;ll pay</span>
+          <span className="font-semibold text-body">
+            {formatINR(tenure.emi)}/month &middot; {tenure.months} months
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => confirmCredit(tenure)}
+          className="w-full rounded-2xl bg-brand py-3.5 text-[15px] font-semibold text-[#03253a] transition active:scale-[0.98]"
+        >
+          One-tap setup &amp; pay {formatINR(amount)}
+        </button>
+        <button
+          type="button"
+          onClick={() => go('checkout')}
+          className="w-full rounded-2xl py-2 text-[12px] font-medium text-muted transition hover:text-body"
+        >
+          Back to {merchant?.name ?? 'payment'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PlanRow({
+  option,
+  amount,
+  selected,
+  onSelect,
+}: {
+  option: EmiOption;
+  amount: number;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition ${
+        selected ? 'border-brand/60 bg-brand/10' : 'border-line bg-surface hover:bg-elevated'
+      }`}
+    >
+      <span
+        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+          selected ? 'border-brand' : 'border-line'
+        }`}
+      >
+        {selected ? <span className="h-2 w-2 rounded-full bg-brand" /> : null}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[14px] font-semibold text-body">
+          {option.months} months &middot; {formatINR(option.emi)}/mo
+        </span>
+        <span className="block text-[11px] text-muted">
+          {option.noCost
+            ? 'No cost EMI — no interest or extra charges'
+            : `Total ${formatINR(option.total)} · ${formatINR(option.interest)} interest`}
+        </span>
+      </span>
+      {option.noCost ? <Pill tone="good">No cost</Pill> : null}
+      {option.lastEmi !== option.emi ? (
+        <span className="shrink-0 text-[10px] text-faint">
+          last {formatINR(option.lastEmi)}
+        </span>
+      ) : null}
+      <span className="sr-only">{formatINR(amount)} total</span>
+    </button>
+  );
+}
+
+/** Real dates, real rounding — the last instalment is the one that differs. */
+export function Schedule({ tenure }: { tenure: EmiOption }) {
+  const rows = buildSchedule(tenure);
+  return (
+    <div className="mt-4 rounded-2xl border border-line bg-surface p-3">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
+        Repayment schedule
+      </p>
+      <ul className="space-y-1.5">
+        {rows.map((row) => (
+          <li key={row.index} className="flex items-baseline justify-between text-[12px]">
+            <span className="text-muted">
+              {row.index}. {formatShortDate(row.date)}
+            </span>
+            <span className="font-medium tabular-nums text-body">{formatINR(row.amount)}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-2 flex items-baseline justify-between border-t border-line pt-2 text-[12px]">
+        <span className="text-muted">Total</span>
+        <span className="font-semibold tabular-nums text-body">{formatINR(tenure.total)}</span>
+      </div>
+    </div>
+  );
+}
+
+export function buildSchedule(tenure: EmiOption) {
+  return Array.from({ length: tenure.months }, (_, index) => ({
+    index: index + 1,
+    date: addMonths(tenure.firstDueDate, index),
+    amount: index === tenure.months - 1 ? tenure.lastEmi : tenure.emi,
+  }));
+}

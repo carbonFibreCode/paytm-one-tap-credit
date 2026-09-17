@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+/**
+ * Paytm-flavoured dark theme, matching the pitch-deck mockups: near-black
+ * background, deep navy surfaces, #00BAF2 as the single bright accent.
+ */
+@theme {
+  --color-ink: #05070f;
+  --color-surface: #0f1420;
+  --color-elevated: #161c2b;
+  --color-line: #232c40;
+
+  --color-brand: #00baf2;
+  --color-brand-deep: #0b2265;
+  --color-gold: #ffd700;
+
+  --color-good: #00c853;
+  --color-warn: #ffb020;
+  --color-bad: #ff5a5f;
+
+  --color-body: #e8ecf5;
+  --color-muted: #8a94ad;
+  --color-faint: #5b6480;
+
+  /* System stack only — no webfont fetch, so the build never depends on the
+     network, and Devanagari / Tamil / Bengali fall back to the OS fonts that
+     render them properly. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-ink);
+  color: var(--color-body);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Thin, unobtrusive scrollbars inside the phone frame. */
+.scroll-slim {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}
+.scroll-slim::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.scroll-slim::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+  border-radius: 999px;
+}
+.scroll-slim::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Hide scrollbars entirely where they would break the illusion of an app. */
+.scroll-none {
+  scrollbar-width: none;
+}
+.scroll-none::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -220% 0;
+  }
+  100% {
+    background-position: 220% 0;
+  }
+}
+
+/* Placeholder shown while Sarvam is still writing the nudge line. */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-line) 25%,
+    var(--color-elevated) 50%,
+    var(--color-line) 75%
+  );
+  background-size: 220% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(0 186 242 / 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgb(0 186 242 / 0);
+  }
+}
+
+.cta-glow {
+  animation: glow-pulse 2.4s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer,
+  .cta-glow {
+    animation: none;
+  }
+}
