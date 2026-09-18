@@ -41,7 +41,14 @@ const schema = z.object({
   /** Sarvam. Unset: nudge copy comes from templates and says so. */
   SARVAM_API_KEY: z.string().optional(),
   SARVAM_BASE_URL: optionalUrl,
-  SARVAM_MODEL: z.string().default('sarvam-m'),
+  /**
+   * sarvam-m was retired: the API now answers "Model 'sarvam-m' has been
+   * deprecated". Of its replacements, sarvam-105b is a reasoning model that
+   * spends its whole token budget in `reasoning_content` and returns a null
+   * message, so a 120-token cap yields nothing to show. The conversations
+   * variant answers directly \u2014 ~400ms, ~38 tokens, one clean line.
+   */
+  SARVAM_MODEL: z.string().default('sarvam-105b-conversations'),
 
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).optional(),
 });
