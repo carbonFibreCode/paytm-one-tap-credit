@@ -220,6 +220,23 @@ that always says yes.
 
 ## Troubleshooting
 
+### Vercel
+
+**"Deployment Blocked — the commit author email is not valid."**
+Git had no `user.email` set, so it invented one from the machine hostname
+(`arunkumar@Aruns-MacBook-Air.local`). Vercel requires the commit author to match
+a verified email on the connected GitHub account. Fix it once, globally:
+
+```bash
+git config --global user.name  "Arun Kumar"
+git config --global user.email "kumararun97429@gmail.com"
+```
+
+Commits already pushed keep the old author — only new ones are affected, and
+Vercel only checks the commit it is building. If the gmail address is not
+verified on GitHub, the always-valid alternative is the account's noreply
+address: `184187559+carbonFibreCode@users.noreply.github.com`.
+
 **Webhook 404 "not registered"** — workflow isn't active. `bash n8n/sync.sh`.
 
 **Workflow edits don't take effect** — n8n 2.x has three sharp edges, all handled by
