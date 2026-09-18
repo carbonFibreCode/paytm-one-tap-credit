@@ -8,10 +8,14 @@
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { cogneeConfigured, recallMemory } from '@/lib/memory/cognee';
+import { cogneeConfigured, recallMemory, warmMemory } from '@/lib/memory/cognee';
 import { badRequest } from '@/lib/api/steps';
 
-const body = z.object({ userId: z.string().min(1) });
+const body = z.object({
+  userId: z.string().min(1),
+  /** Wait for Cognee instead of serving the cache — for warm-ups, not checkout. */
+  warm: z.boolean().optional().default(false),
+});
 
 export async function POST(request: Request) {
   let payload: unknown;
@@ -24,7 +28,9 @@ export async function POST(request: Request) {
   const parsed = body.safeParse(payload);
   if (!parsed.success) return NextResponse.json(badRequest(parsed.error), { status: 400 });
 
-  const memory = await recallMemory(parsed.data.userId);
+  const memory = parsed.data.warm
+    ? await warmMemory(parsed.data.userId)
+    : await recallMemory(parsed.data.userId);
 
   return NextResponse.json({
     stage: 'recall',
