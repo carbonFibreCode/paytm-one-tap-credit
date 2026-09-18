@@ -1,0 +1,13 @@
+{
+  "name": "one-tap-credit-cognee-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cognee memory sidecar. Kept out of the Next.js app because @cognee/cognee-ts is a 257MB platform-specific native addon that cannot run in a serverless function.",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@cognee/cognee-ts": "^0.1.0"
+  }
+}

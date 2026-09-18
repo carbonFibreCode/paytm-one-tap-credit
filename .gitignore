@@ -47,3 +47,5 @@ next-env.d.ts
 CLAUDE.md
 .data/
 n8n/cloud/
+cognee-service/node_modules/
+cognee-service/.data/
