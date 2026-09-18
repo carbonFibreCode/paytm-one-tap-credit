@@ -8,8 +8,7 @@
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { selectProduct } from '@/lib/engine/product';
-import { affordableTenures, buildTenures } from '@/lib/engine/emi';
+import { buildOffer, DECLINE } from '@/lib/engine/offer';
 import type { ProductState } from '@/lib/types';
 import { badRequest, categoryEnum, profileShape, rupees } from '@/lib/api/steps';
 
@@ -45,35 +44,23 @@ export async function POST(request: Request) {
   const { profile, amount, merchantCategory, fundingProducts, eligibleProducts } = parsed.data;
   const timestamp = parsed.data.timestamp ?? new Date().toISOString();
 
-  const { product, rationale } = selectProduct(
-    fundingProducts as ProductState[],
+  // The same function `decide()` uses — the staged path can never disagree
+  // with the direct one about the product or the plans.
+  const built = buildOffer({
+    fundingProducts: fundingProducts as ProductState[],
+    eligibleProducts: (eligibleProducts.length > 0 ? eligibleProducts : fundingProducts) as ProductState[],
     amount,
-    (eligibleProducts.length > 0 ? eligibleProducts : fundingProducts) as ProductState[],
-  );
-
-  const allTenures = buildTenures(amount, product.id, merchantCategory, timestamp);
-  const capacity = profile.features.affordabilityCapacity;
-  const affordable = affordableTenures(allTenures, capacity);
-
-  // The affordability gate guarantees at least one plan fits; keep the cheapest
-  // as a floor in case rounding leaves the list empty.
-  const tenures =
-    affordable.length > 0
-      ? affordable
-      : [allTenures.reduce((cheapest, option) => (option.emi < cheapest.emi ? option : cheapest))];
+    category: merchantCategory,
+    timestamp,
+    capacity: profile.features.affordabilityCapacity,
+  });
 
   return NextResponse.json({
     stage: 'offer',
-    product: product.id,
-    offer: {
-      product: product.id,
-      partner: product.partner,
-      limit: product.limit,
-      available: product.available,
-      tenures,
-    },
-    productRationale: rationale,
-    tenuresWithheld: allTenures.length - tenures.length,
-    decline: { label: 'No thanks, pay normally', suppressDays: 7 },
+    product: built.product.id,
+    offer: built.offer,
+    productRationale: built.rationale,
+    tenuresWithheld: built.tenuresWithheld,
+    decline: DECLINE,
   });
 }

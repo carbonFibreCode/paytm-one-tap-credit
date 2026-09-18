@@ -20,17 +20,14 @@ import type {
   EmiOption,
   GateId,
   GateResult,
-  Offer,
   ProductState,
   UserProfile,
 } from '../types';
 import { runGates, type GateContext, AMOUNT_FLOOR, ELIGIBILITY_THRESHOLD } from './gates';
 import { NUDGE_SCORE_THRESHOLD, scoreTransaction } from './score';
-import { CARD_PREFERENCE_THRESHOLD, selectProduct } from './product';
-import { affordableTenures, buildTenures, lowestInstalment } from './emi';
-
-/** How long a declined offer is respected before we may ask again. */
-const DECLINE_SUPPRESS_DAYS = 7;
+import { CARD_PREFERENCE_THRESHOLD } from './product';
+import { buildTenures, lowestInstalment } from './emi';
+import { buildOffer, DECLINE } from './offer';
 
 export interface DecideInput {
   request: DecisionRequest;
@@ -152,47 +149,16 @@ export function decide(input: DecideInput): Decision {
   }
 
   // --- build the offer ---
-  const capacity = profile.features.affordabilityCapacity;
-  const preferred = selectProduct(fundingProducts, amount, eligibleProducts);
-
-  // The affordability gate passed on the cheapest plan across *all* funding
-  // products. The preferred product is not necessarily the one carrying it: a
-  // user near capacity may only fit the card's 12-month plan, not Postpaid's
-  // 6-month one. Offering a plan above capacity would contradict the gate, so
-  // switch to whichever product actually has a plan that fits.
-  const fits = (candidate: ProductState) =>
-    affordableTenures(tenuresByProduct.get(candidate.id) ?? [], capacity);
-  const alternative =
-    fits(preferred.product).length === 0
-      ? fundingProducts.find((candidate) => candidate.id !== preferred.product.id && fits(candidate).length > 0)
-      : undefined;
-  const { product, rationale } = alternative
-    ? {
-        product: alternative,
-        rationale: `${alternative.partner} selected — every ${preferred.product.partner} plan for ${rupees(
-          amount,
-        )} exceeds ${rupees(capacity)}/month of assessed capacity; ${alternative.partner} offers a longer tenure that fits`,
-      }
-    : preferred;
-  const allTenures = tenuresByProduct.get(product.id) ?? [];
-  const affordable = fits(product);
-
-  // Unreachable while the gate and `fits` agree; kept as a floor so a rounding
-  // edge can never produce an empty offer.
-  const tenures =
-    affordable.length > 0
-      ? affordable
-      : [allTenures.reduce((cheapest, option) => (option.emi < cheapest.emi ? option : cheapest))];
-
-  const offer: Offer = {
-    product: product.id,
-    partner: product.partner,
-    limit: product.limit,
-    available: product.available,
-    tenures,
-  };
-
-  const suppressed = allTenures.length - tenures.length;
+  // Shared with the n8n offer stage, so the two paths cannot drift apart.
+  const { offer, product, rationale } = buildOffer({
+    fundingProducts,
+    eligibleProducts,
+    amount,
+    category: merchantCategory,
+    timestamp: request.timestamp,
+    capacity: profile.features.affordabilityCapacity,
+    tenuresByProduct,
+  });
 
   return {
     ...base,
@@ -201,18 +167,13 @@ export function decide(input: DecideInput): Decision {
     blockedBy: null,
     blockedReason: null,
     offer,
-    decline: { label: 'No thanks, pay normally', suppressDays: DECLINE_SUPPRESS_DAYS },
+    decline: DECLINE,
     trace: {
       gates,
       factors,
-      productRationale:
-        suppressed > 0
-          ? `${rationale}. ${suppressed} shorter tenure${
-              suppressed === 1 ? '' : 's'
-            } withheld — the instalment would exceed ${rupees(capacity)}/month of assessed capacity`
-          : rationale,
+      productRationale: rationale,
       counterfactual: counterfactualForNudge(context, score),
-      summary: summarise(product, amount, tenures, score),
+      summary: summarise(product, amount, offer.tenures, score),
     },
   };
 }

@@ -37,20 +37,22 @@ export interface ProfilePayload {
 
 /** Returns null while loading, or if the request fails — callers show a skeleton. */
 export function useProfile(userId: string, enabled: boolean): ProfilePayload | null {
-  const [profile, setProfile] = useState<ProfilePayload | null>(null);
+  // Keyed by user so a stale profile is never shown for the wrong persona:
+  // switching users reads as "loading" until the new response lands, with no
+  // reset-in-effect needed.
+  const [loaded, setLoaded] = useState<{ userId: string; profile: ProfilePayload } | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
-    setProfile(null);
 
     fetch(`/api/profile?userId=${encodeURIComponent(userId)}`)
       .then((response) => (response.ok ? response.json() : null))
-      .then((data) => {
-        if (!cancelled) setProfile(data);
+      .then((data: ProfilePayload | null) => {
+        if (!cancelled && data) setLoaded({ userId, profile: data });
       })
       .catch(() => {
-        if (!cancelled) setProfile(null);
+        // Callers keep showing the skeleton.
       });
 
     return () => {
@@ -58,5 +60,5 @@ export function useProfile(userId: string, enabled: boolean): ProfilePayload | n
     };
   }, [userId, enabled]);
 
-  return profile;
+  return loaded?.userId === userId ? loaded.profile : null;
 }

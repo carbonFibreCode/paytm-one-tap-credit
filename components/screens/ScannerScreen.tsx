@@ -32,6 +32,21 @@ const REFUSAL_MS = 3_200;
 
 type CameraState = 'idle' | 'starting' | 'live' | 'denied' | 'unsupported';
 
+interface QrDetector {
+  detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>>;
+}
+
+/** Chrome ships `BarcodeDetector`; Safari does not. Null means "use the list". */
+function createDetector(): QrDetector | null {
+  try {
+    const Detector = (window as unknown as Record<string, new (options: unknown) => QrDetector>)
+      .BarcodeDetector;
+    return Detector ? new Detector({ formats: ['qr_code'] }) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function ScannerScreen() {
   const { selectMerchant, go } = useApp();
   const [locked, setLocked] = useState<string | null>(null);
@@ -42,6 +57,8 @@ export function ScannerScreen() {
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  /** Built once the camera is live; null where the platform has no `BarcodeDetector`. */
+  const detectorRef = useRef<QrDetector | null>(null);
   const lockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refusalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** One verification in flight at a time; frames keep arriving while we wait. */
@@ -117,7 +134,8 @@ export function ScannerScreen() {
         await videoRef.current.play().catch(() => {});
       }
       setCamera('live');
-      setCanDecode('BarcodeDetector' in window);
+      detectorRef.current = createDetector();
+      setCanDecode(detectorRef.current !== null);
     } catch {
       setCamera('denied');
     }
@@ -137,16 +155,9 @@ export function ScannerScreen() {
   useEffect(() => {
     if (camera !== 'live' || !canDecode || locked || refusal) return;
 
+    const detector = detectorRef.current;
+    if (!detector) return;
     let cancelled = false;
-    let detector: { detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>> };
-    try {
-      const Detector = (window as unknown as Record<string, new (options: unknown) => typeof detector>)
-        .BarcodeDetector;
-      detector = new Detector({ formats: ['qr_code'] });
-    } catch {
-      setCanDecode(false);
-      return;
-    }
 
     const timer = setInterval(async () => {
       const video = videoRef.current;

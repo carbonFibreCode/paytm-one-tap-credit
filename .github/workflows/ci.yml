@@ -1,0 +1,26 @@
+# Every push and pull request: types, lint, tests, build. Vercel deploys on
+# push to main regardless — this is the gate that tells you a deploy was bad
+# before a judge does. Enable "wait for checks" in the Vercel project's Git
+# settings to make it a real gate.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      # No DATABASE_URL in CI on purpose: the build must succeed without one.
+      - run: npm run build

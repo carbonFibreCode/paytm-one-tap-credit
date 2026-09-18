@@ -474,7 +474,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needsCopy, decision, amount, merchantId, languageOverride, userId]);
 
   // --- actions -------------------------------------------------------------
