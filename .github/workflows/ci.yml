@@ -16,7 +16,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Matches the local toolchain; vitest 5 requires >=22.12.
+          node-version: 24
           cache: npm
       - run: npm ci
       - run: npm run format:check
