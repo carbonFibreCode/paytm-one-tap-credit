@@ -70,7 +70,7 @@ export async function insertRecord(record: AuditRecord): Promise<void> {
 
 export function decisionToRecord(row: DecisionRow): AuditRecord {
   return {
-    at: row.requestedAt,
+    at: row.requestedAt.toISOString(),
     type: 'decision',
     transactionId: row.decisionKey,
     userId: row.userId,
@@ -93,7 +93,7 @@ export function decisionToRecord(row: DecisionRow): AuditRecord {
 
 export function nudgeEventToRecord(row: NudgeEventRow): AuditRecord {
   return {
-    at: row.occurredAt,
+    at: row.occurredAt.toISOString(),
     type: 'outcome',
     transactionId: row.decisionKey,
     userId: row.userId,

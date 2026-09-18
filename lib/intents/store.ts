@@ -70,10 +70,9 @@ export async function ensureStaticIntents(now = new Date().toISOString()): Promi
       .values(MERCHANTS.map((merchant) => draft(merchant, 'static', undefined, staticRef(merchant), now)))
       .onConflictDoNothing({ target: paymentIntents.ref }),
   );
-  const rows = await withTimeout(
+  return withTimeout(
     client.select().from(paymentIntents).where(eq(paymentIntents.kind, 'static')),
   );
-  return rows.map(normaliseIntent);
 }
 
 /** A bill: this merchant, this amount, payable for the next `ttlMinutes`. */
@@ -93,26 +92,7 @@ export async function createDynamicIntent(
       .values(draft(merchant, 'dynamic', amount, dynamicRef(merchant), now, ttlMinutes))
       .returning(),
   );
-  return normaliseIntent(row);
-}
-
-/**
- * Postgres hands timestamps back as `2026-09-18 11:27:44.831+00`; Safari's
- * `Date.parse` does not accept that. Everything that leaves this module is
- * ISO 8601 so the browser countdown cannot misread it.
- */
-function iso(value: string | null): string | null {
-  return value === null ? null : new Date(value).toISOString();
-}
-
-export function normaliseIntent(row: IntentRow): IntentRow {
-  return {
-    ...row,
-    expiresAt: iso(row.expiresAt),
-    createdAt: iso(row.createdAt)!,
-    scannedAt: iso(row.scannedAt),
-    paidAt: iso(row.paidAt),
-  };
+  return row;
 }
 
 export async function findIntent(ref: string): Promise<IntentRow | null> {
@@ -121,15 +101,18 @@ export async function findIntent(ref: string): Promise<IntentRow | null> {
   const [row] = await withTimeout(
     client.select().from(paymentIntents).where(eq(paymentIntents.ref, ref)).limit(1),
   );
-  return row ? normaliseIntent(row) : null;
+  return row ?? null;
 }
 
 export type IntentState = 'created' | 'scanned' | 'paid' | 'expired';
 
 /** Pure: the stored status, overridden by the clock when the code has expired. */
-export function intentState(row: Pick<IntentRow, 'status' | 'expiresAt'>, now: string): IntentState {
+export function intentState(
+  row: Pick<IntentRow, 'status' | 'expiresAt'>,
+  now: string | Date,
+): IntentState {
   if (row.status === 'paid') return 'paid';
-  if (row.expiresAt && Date.parse(row.expiresAt) <= Date.parse(now)) return 'expired';
+  if (row.expiresAt && row.expiresAt.getTime() <= new Date(now).getTime()) return 'expired';
   return row.status;
 }
 
@@ -172,13 +155,13 @@ export async function scanIntent(payload: string, now = new Date().toISOString()
     await withTimeout(
       db()!
         .update(paymentIntents)
-        .set({ status: 'scanned', scannedAt: now })
+        .set({ status: 'scanned', scannedAt: new Date(now) })
         .where(eq(paymentIntents.ref, row.ref)),
     );
   }
   return {
     ok: true,
-    intent: { ...row, status: 'scanned', scannedAt: row.scannedAt ?? now },
+    intent: { ...row, status: 'scanned', scannedAt: row.scannedAt ?? new Date(now) },
     merchantId: row.merchantId,
     amount: row.amount ?? undefined,
   };

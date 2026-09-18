@@ -14,6 +14,7 @@
  */
 
 import type { Language } from '../types';
+import { configured, env } from '../env';
 import { formatINR } from '../format';
 import { log } from '../log';
 import { renderTemplate, type NudgeContext } from './templates';
@@ -21,8 +22,8 @@ import { renderTemplate, type NudgeContext } from './templates';
 const TIMEOUT_MS = 2_500;
 const MAX_LENGTH = 160;
 
-const BASE_URL = process.env.SARVAM_BASE_URL ?? 'https://api.sarvam.ai';
-const MODEL = process.env.SARVAM_MODEL ?? 'sarvam-m';
+const BASE_URL = env.SARVAM_BASE_URL || 'https://api.sarvam.ai';
+const MODEL = env.SARVAM_MODEL;
 
 export type NudgeSource = 'sarvam' | 'template' | 'cache';
 
@@ -172,11 +173,11 @@ function buildPrompt(context: NudgeContext): { system: string; user: string } {
 
 /** Is a live Sarvam call even possible? */
 export function sarvamConfigured(): boolean {
-  return Boolean(process.env.SARVAM_API_KEY);
+  return configured.sarvam;
 }
 
 async function callSarvam(context: NudgeContext): Promise<string> {
-  const apiKey = process.env.SARVAM_API_KEY;
+  const apiKey = env.SARVAM_API_KEY;
   if (!apiKey) throw new Error('SARVAM_API_KEY is not set');
 
   const { system, user } = buildPrompt(context);

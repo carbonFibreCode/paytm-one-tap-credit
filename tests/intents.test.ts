@@ -81,12 +81,12 @@ describe('intent lifecycle', () => {
   });
 
   test('a dynamic code expires on the clock, whatever its stored status says', () => {
-    expect(intentState({ status: 'created', expiresAt: '2026-09-19T14:45:00.000Z' }, now)).toBe('created');
-    expect(intentState({ status: 'created', expiresAt: '2026-09-19T14:30:00.000Z' }, now)).toBe('expired');
-    expect(intentState({ status: 'scanned', expiresAt: '2026-09-19T14:00:00.000Z' }, now)).toBe('expired');
+    expect(intentState({ status: 'created', expiresAt: new Date('2026-09-19T14:45:00.000Z') }, now)).toBe('created');
+    expect(intentState({ status: 'created', expiresAt: new Date('2026-09-19T14:30:00.000Z') }, now)).toBe('expired');
+    expect(intentState({ status: 'scanned', expiresAt: new Date('2026-09-19T14:00:00.000Z') }, now)).toBe('expired');
   });
 
   test('paid is terminal — expiry cannot undo it', () => {
-    expect(intentState({ status: 'paid', expiresAt: '2026-09-19T14:00:00.000Z' }, now)).toBe('paid');
+    expect(intentState({ status: 'paid', expiresAt: new Date('2026-09-19T14:00:00.000Z') }, now)).toBe('paid');
   });
 });

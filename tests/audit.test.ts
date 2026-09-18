@@ -53,7 +53,7 @@ describe('row ↔ record mapping', () => {
       amount: decision.amount ?? null,
       merchantName: decision.merchantName ?? null,
       merchantCategory: decision.merchantCategory ?? null,
-      requestedAt: decision.at,
+      requestedAt: new Date(decision.at),
       showNudge: decision.showNudge ?? null,
       product: decision.product ?? null,
       score: decision.score ?? null,
@@ -78,7 +78,7 @@ describe('row ↔ record mapping', () => {
       outcome: 'accepted',
       merchantCategory: 'electronics',
       nudgeSource: 'template',
-      occurredAt: decision.at,
+      occurredAt: new Date(decision.at),
     });
     expect(record.type).toBe('outcome');
     expect(record.outcome).toBe('accepted');

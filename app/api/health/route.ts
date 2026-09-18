@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { sarvamConfigured } from '@/lib/nudge/sarvam';
 import { PERSONAS } from '@/lib/personas';
 import { MERCHANTS } from '@/lib/merchants';
+import { configured } from '@/lib/env';
 import { dbConfigured } from '@/lib/db/client';
 import { countRecords } from '@/lib/audit/db';
 import { ENGINE_VERSION } from '@/lib/engine/version';
@@ -27,6 +28,9 @@ export async function GET() {
     engine: ENGINE_VERSION,
     database: await databaseStatus(),
     nudgeCopy: sarvamConfigured() ? 'sarvam' : 'fallback',
+    // One call shows the whole configuration, so a misconfigured deploy is
+    // visible before a judge finds it.
+    configured,
     personas: PERSONAS.length,
     merchants: MERCHANTS.length,
     time: new Date().toISOString(),

@@ -37,6 +37,14 @@ export const isoTimestamp = z.string().refine((value) => !Number.isNaN(Date.pars
 
 export const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'must be a YYYY-MM-DD date');
 
+/**
+ * A timestamp on its way *into* the database. Columns are `mode: 'date'`, so
+ * Postgres hands back `Date` objects and never its own `2026-09-18 11:27+00`
+ * spelling, which Safari's `Date.parse` rejects. Callers keep passing ISO
+ * strings; this coerces them.
+ */
+export const timestampIn = z.coerce.date();
+
 /** An instalment plan exactly as the engine offered it — see `EmiOption`. */
 export const emiOption = z.object({
   months: z.number().int().min(1).max(36, 'must be a whole number between 1 and 36'),

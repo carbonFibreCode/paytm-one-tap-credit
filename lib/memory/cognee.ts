@@ -21,13 +21,14 @@
  */
 
 import type { MemoryContext } from '../engine/score';
+import { configured, env } from '../env';
 import { errorInfo, log } from '../log';
 import { readRecords, type AuditRecord } from '../audit/store';
 
 /** Per-tenant base URL, copied from the API Keys page in Cognee Cloud. */
-const API_URL = (process.env.COGNEE_API_URL ?? '').replace(/\/+$/, '');
-const API_KEY = process.env.COGNEE_API_KEY ?? '';
-const DATASET = process.env.COGNEE_DATASET ?? 'one-tap-credit';
+const API_URL = (env.COGNEE_API_URL ?? '').replace(/\/+$/, '');
+const API_KEY = env.COGNEE_API_KEY ?? '';
+const DATASET = env.COGNEE_DATASET;
 /** Writes are quick. Searches measured at 5–6s, so they get their own budget. */
 const WRITE_TIMEOUT_MS = 6_000;
 const SEARCH_TIMEOUT_MS = 12_000;
@@ -35,7 +36,7 @@ const SEARCH_TIMEOUT_MS = 12_000;
 const CACHE_TTL_MS = 5 * 60_000;
 
 export function cogneeConfigured(): boolean {
-  return API_URL.length > 0 && API_KEY.length > 0;
+  return configured.cognee;
 }
 
 async function callCognee<T>(

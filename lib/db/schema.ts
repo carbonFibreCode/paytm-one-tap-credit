@@ -32,7 +32,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { isoDate, isoTimestamp } from '../schemas';
+import { isoDate, timestampIn } from '../schemas';
 import type { DecisionTrace } from '../types';
 
 export const servedByEnum = pgEnum('served_by', ['n8n', 'direct']);
@@ -54,7 +54,7 @@ export const decisions = pgTable(
     amount: integer(),
     merchantName: text(),
     merchantCategory: text(),
-    requestedAt: timestamp({ withTimezone: true, mode: 'string' }).notNull(),
+    requestedAt: timestamp({ withTimezone: true, mode: 'date' }).notNull(),
     showNudge: boolean(),
     product: text(),
     score: integer(),
@@ -87,7 +87,7 @@ export const nudgeEvents = pgTable(
     merchantCategory: text(),
     /** 'sarvam' when the model wrote the copy, 'template' otherwise. */
     nudgeSource: text(),
-    occurredAt: timestamp({ withTimezone: true, mode: 'string' }).notNull(),
+    occurredAt: timestamp({ withTimezone: true, mode: 'date' }).notNull(),
   },
   (table) => [index('nudge_events_user_occurred_idx').on(table.userId, table.occurredAt)],
 );
@@ -119,10 +119,10 @@ export const paymentIntents = pgTable(
     signature: text().notNull(),
     status: intentStatusEnum().notNull().default('created'),
     /** Dynamic codes expire; static ones never do. */
-    expiresAt: timestamp({ withTimezone: true, mode: 'string' }),
-    createdAt: timestamp({ withTimezone: true, mode: 'string' }).notNull(),
-    scannedAt: timestamp({ withTimezone: true, mode: 'string' }),
-    paidAt: timestamp({ withTimezone: true, mode: 'string' }),
+    expiresAt: timestamp({ withTimezone: true, mode: 'date' }),
+    createdAt: timestamp({ withTimezone: true, mode: 'date' }).notNull(),
+    scannedAt: timestamp({ withTimezone: true, mode: 'date' }),
+    paidAt: timestamp({ withTimezone: true, mode: 'date' }),
     /** The decision this scan led to — links the intent into the audit trail. */
     decisionKey: text(),
   },
@@ -154,7 +154,7 @@ export const payments = pgTable(
     amount: integer().notNull(),
     method: paymentMethodEnum().notNull(),
     partner: text(),
-    paidAt: timestamp({ withTimezone: true, mode: 'string' }).notNull(),
+    paidAt: timestamp({ withTimezone: true, mode: 'date' }).notNull(),
   },
   (table) => [index('payments_user_paid_idx').on(table.userId, table.paidAt)],
 );
@@ -175,7 +175,7 @@ export const creditAccounts = pgTable(
     interest: integer().notNull().default(0),
     noCost: boolean().notNull().default(false),
     status: accountStatusEnum().notNull().default('active'),
-    openedAt: timestamp({ withTimezone: true, mode: 'string' }).notNull(),
+    openedAt: timestamp({ withTimezone: true, mode: 'date' }).notNull(),
   },
   (table) => [index('credit_accounts_user_status_idx').on(table.userId, table.status)],
 );
@@ -192,7 +192,7 @@ export const emiInstallments = pgTable(
     dueDate: date({ mode: 'string' }).notNull(),
     amount: integer().notNull(),
     status: installmentStatusEnum().notNull().default('due'),
-    paidAt: timestamp({ withTimezone: true, mode: 'string' }),
+    paidAt: timestamp({ withTimezone: true, mode: 'date' }),
   },
   (table) => [unique('emi_installments_account_seq').on(table.accountId, table.seq)],
 );
@@ -226,7 +226,7 @@ export const insertDecisionSchema = createInsertSchema(decisions, {
   decisionKey: (schema) => schema.min(1),
   userId: (schema) => schema.min(1),
   amount: (schema) => schema.positive(),
-  requestedAt: () => isoTimestamp,
+  requestedAt: () => timestampIn,
   score: (schema) => schema.min(0).max(100),
   eligibilitySignal: (schema) => schema.min(0).max(100),
   latencyMs: (schema) => schema.nonnegative(),
@@ -235,7 +235,7 @@ export const insertDecisionSchema = createInsertSchema(decisions, {
 export const insertNudgeEventSchema = createInsertSchema(nudgeEvents, {
   decisionKey: (schema) => schema.min(1),
   userId: (schema) => schema.min(1),
-  occurredAt: () => isoTimestamp,
+  occurredAt: () => timestampIn,
 });
 
 export const insertPaymentSchema = createInsertSchema(payments, {
@@ -243,7 +243,7 @@ export const insertPaymentSchema = createInsertSchema(payments, {
   merchantId: (schema) => schema.min(1),
   merchantName: (schema) => schema.min(1),
   amount: (schema) => schema.positive(),
-  paidAt: () => isoTimestamp,
+  paidAt: () => timestampIn,
 });
 
 export const insertCreditAccountSchema = createInsertSchema(creditAccounts, {
@@ -252,7 +252,7 @@ export const insertCreditAccountSchema = createInsertSchema(creditAccounts, {
   principal: (schema) => schema.positive(),
   tenureMonths: (schema) => schema.min(1).max(36),
   interest: (schema) => schema.nonnegative(),
-  openedAt: () => isoTimestamp,
+  openedAt: () => timestampIn,
 });
 
 export const insertInstallmentSchema = createInsertSchema(emiInstallments, {
@@ -269,8 +269,8 @@ export const insertIntentSchema = createInsertSchema(paymentIntents, {
   amount: (schema) => schema.positive(),
   payload: (schema) => schema.startsWith('upi://pay?'),
   signature: (schema) => schema.min(16),
-  createdAt: () => isoTimestamp,
-  expiresAt: () => isoTimestamp.nullable(),
+  createdAt: () => timestampIn,
+  expiresAt: () => timestampIn.nullable(),
 });
 
 export type IntentRow = typeof paymentIntents.$inferSelect;

@@ -93,7 +93,7 @@ export async function recordPayment(input: RecordPaymentInput): Promise<Recorded
     statements.push(
       client
         .update(paymentIntents)
-        .set({ status: 'paid', paidAt: input.at })
+        .set({ status: 'paid', paidAt: new Date(input.at) })
         .where(eq(paymentIntents.ref, input.intentRef)),
     );
   }

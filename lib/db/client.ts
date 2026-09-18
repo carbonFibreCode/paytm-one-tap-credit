@@ -13,15 +13,14 @@
 
 import { neon } from '@neondatabase/serverless';
 import { drizzle, type NeonHttpDatabase } from 'drizzle-orm/neon-http';
+import { configured, env } from '../env';
 import * as schema from './schema';
-
-const DATABASE_URL = process.env.DATABASE_URL ?? '';
 
 /** Budget for one query inside a request. Same region should land in ~10–30ms. */
 export const DB_TIMEOUT_MS = 800;
 
 export function dbConfigured(): boolean {
-  return DATABASE_URL.length > 0;
+  return configured.database;
 }
 
 let cached: NeonHttpDatabase<typeof schema> | null = null;
@@ -29,7 +28,7 @@ let cached: NeonHttpDatabase<typeof schema> | null = null;
 /** The client, or null when no database is configured. Built once per lambda. */
 export function db(): NeonHttpDatabase<typeof schema> | null {
   if (!dbConfigured()) return null;
-  cached ??= drizzle(neon(DATABASE_URL), { schema, casing: 'snake_case' });
+  cached ??= drizzle(neon(env.DATABASE_URL!), { schema, casing: 'snake_case' });
   return cached;
 }
 

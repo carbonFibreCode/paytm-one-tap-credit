@@ -15,6 +15,10 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { log } from '../log';
 import { unsignedPortion } from '../upi';
 
+/**
+ * Development only. `lib/env.ts` refuses to boot a production build without a
+ * real secret, so this can never sign anything that reaches a user.
+ */
 const DEV_SECRET = 'one-tap-credit-development-signing-key';
 let warned = false;
 
