@@ -8,27 +8,18 @@
 
 import { NextResponse } from 'next/server';
 import { decide } from '@/lib/engine/decide';
-import { buildProfile, getPersona } from '@/lib/personas';
-import { parseDecideRequest } from '@/lib/api/validate';
-import { liveCreditOrEmpty } from '@/lib/credit/store';
 import { ENGINE_VERSION } from '@/lib/engine/version';
+import { buildProfile, getPersona } from '@/lib/personas';
+import { decideBody, resolveDecideRequest } from '@/lib/api/schemas';
+import { jsonRoute } from '@/lib/api/route';
+import { liveCreditOrEmpty } from '@/lib/credit/store';
 
-export async function POST(request: Request) {
-  const now = new Date().toISOString();
+export const POST = jsonRoute(decideBody, async (body) => {
+  const { request: decisionRequest, merchantCreditEnabled } = resolveDecideRequest(
+    body,
+    new Date().toISOString(),
+  );
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Request body is not valid JSON' }, { status: 400 });
-  }
-
-  const parsed = parseDecideRequest(body, now);
-  if (!parsed.ok) {
-    return NextResponse.json({ error: parsed.error }, { status: parsed.status });
-  }
-
-  const { request: decisionRequest, merchantCreditEnabled } = parsed.value;
   const persona = getPersona(decisionRequest.userId)!;
   // Credit already extended here is an *input* to the profile, read by this
   // route and handed over — the engine itself still touches no database.
@@ -55,4 +46,4 @@ export async function POST(request: Request) {
     },
     engine: { version: ENGINE_VERSION, evaluatedAt: decisionRequest.timestamp },
   });
-}
+});

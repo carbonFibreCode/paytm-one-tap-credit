@@ -23,13 +23,17 @@ const emi = (): RecurringObligation => ({
   occurrences: 0,
 });
 
-function post(handler: (request: Request) => Promise<Response>, body: unknown) {
+function post(
+  handler: (request: Request, context: never) => Promise<Response>,
+  body: unknown,
+) {
   return handler(
     new Request('http://test/api', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }),
+    undefined as never,
   );
 }
 

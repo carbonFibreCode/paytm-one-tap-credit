@@ -9,28 +9,17 @@
 
 import { NextResponse } from 'next/server';
 import { generateNudgeText } from '@/lib/nudge/sarvam';
-import { parseNudgeTextRequest } from '@/lib/api/validate';
+import { nudgeTextBody } from '@/lib/api/schemas';
+import { jsonRoute } from '@/lib/api/route';
 
-export async function POST(request: Request) {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Request body is not valid JSON' }, { status: 400 });
-  }
-
-  const parsed = parseNudgeTextRequest(body);
-  if (!parsed.ok) {
-    return NextResponse.json({ error: parsed.error }, { status: parsed.status });
-  }
-
-  const result = await generateNudgeText(parsed.value);
+export const POST = jsonRoute(nudgeTextBody, async (input) => {
+  const result = await generateNudgeText(input);
 
   return NextResponse.json({
     nudgeText: result.text,
     source: result.source,
     reason: result.reason ?? null,
     latencyMs: result.latencyMs ?? null,
-    language: parsed.value.language,
+    language: input.language,
   });
-}
+});

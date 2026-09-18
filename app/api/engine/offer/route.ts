@@ -7,42 +7,13 @@
  */
 
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { buildOffer, DECLINE } from '@/lib/engine/offer';
 import type { ProductState } from '@/lib/types';
-import { badRequest, categoryEnum, profileShape, rupees } from '@/lib/api/steps';
+import { offerBody } from '@/lib/api/schemas';
+import { jsonRoute } from '@/lib/api/route';
 
-const productShape = z.object({
-  id: z.enum(['postpaid', 'card']),
-  eligible: z.boolean(),
-  active: z.boolean(),
-  limit: z.number(),
-  available: z.number(),
-  partner: z.string(),
-});
-
-const body = z.object({
-  profile: profileShape,
-  amount: rupees,
-  merchantCategory: categoryEnum,
-  timestamp: z.string().optional(),
-  fundingProducts: z.array(productShape).min(1, 'must contain at least one product'),
-  eligibleProducts: z.array(productShape).optional().default([]),
-});
-
-export async function POST(request: Request) {
-  let payload: unknown;
-  try {
-    payload = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Request body is not valid JSON' }, { status: 400 });
-  }
-
-  const parsed = body.safeParse(payload);
-  if (!parsed.success) return NextResponse.json(badRequest(parsed.error), { status: 400 });
-
-  const { profile, amount, merchantCategory, fundingProducts, eligibleProducts } = parsed.data;
-  const timestamp = parsed.data.timestamp ?? new Date().toISOString();
+export const POST = jsonRoute(offerBody, (input) => {
+  const { profile, amount, merchantCategory, fundingProducts, eligibleProducts } = input;
 
   // The same function `decide()` uses — the staged path can never disagree
   // with the direct one about the product or the plans.
@@ -51,7 +22,7 @@ export async function POST(request: Request) {
     eligibleProducts: (eligibleProducts.length > 0 ? eligibleProducts : fundingProducts) as ProductState[],
     amount,
     category: merchantCategory,
-    timestamp,
+    timestamp: input.timestamp ?? new Date().toISOString(),
     capacity: profile.features.affordabilityCapacity,
   });
 
@@ -63,4 +34,4 @@ export async function POST(request: Request) {
     tenuresWithheld: built.tenuresWithheld,
     decline: DECLINE,
   });
-}
+});

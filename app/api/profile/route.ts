@@ -9,12 +9,13 @@
 import { NextResponse } from 'next/server';
 import { buildProfileWithLedger, getPersona } from '@/lib/personas';
 import { personOrDefault, PEOPLE } from '@/lib/people';
+import { getRoute, unknown } from '@/lib/api/route';
 import { liveCreditOrEmpty } from '@/lib/credit/store';
 
 /** Most recent rows only — enough to show the pattern without shipping 250 entries. */
 const LEDGER_PAGE_SIZE = 40;
 
-export async function GET(request: Request) {
+export const GET = getRoute(async (request) => {
   const userId = new URL(request.url).searchParams.get('userId');
 
   if (!userId) {
@@ -31,13 +32,10 @@ export async function GET(request: Request) {
   }
 
   const persona = getPersona(userId);
-  if (!persona) {
-    return NextResponse.json({ error: `Unknown userId \`${userId}\`` }, { status: 404 });
-  }
+  if (!persona) throw unknown('userId', userId);
 
-  const now = new Date().toISOString();
   const live = await liveCreditOrEmpty(userId);
-  const { profile, ledger } = buildProfileWithLedger(persona, now, live);
+  const { profile, ledger } = buildProfileWithLedger(persona, new Date().toISOString(), live);
   const person = personOrDefault(userId);
 
   return NextResponse.json({
@@ -51,9 +49,6 @@ export async function GET(request: Request) {
     eligibilityBreakdown: profile.eligibilityBreakdown,
     features: profile.features,
     products: profile.products,
-    ledger: {
-      total: ledger.length,
-      recent: ledger.slice(-LEDGER_PAGE_SIZE).reverse(),
-    },
+    ledger: { total: ledger.length, recent: ledger.slice(-LEDGER_PAGE_SIZE).reverse() },
   });
-}
+});

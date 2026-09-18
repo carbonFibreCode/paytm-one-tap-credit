@@ -8,83 +8,48 @@
  */
 
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
-import { badRequest } from '@/lib/api/steps';
+import { attachBody, scanBody } from '@/lib/api/schemas';
+import { getRoute, jsonRoute, unknown } from '@/lib/api/route';
 import { attachDecision, findIntent, intentState, scanIntent } from '@/lib/intents/store';
 
 type Context = { params: Promise<{ ref: string }> };
 
-const scanBody = z.object({ payload: z.string().min(1) });
-const attachBody = z.object({ decisionKey: z.string().min(1) });
-
-async function json(request: Request): Promise<unknown | null> {
-  try {
-    return await request.json();
-  } catch {
-    return null;
-  }
-}
-
-export async function GET(_request: Request, { params }: Context) {
+export const GET = getRoute<Context>(async (_request, { params }) => {
   const { ref } = await params;
-  try {
-    const intent = await findIntent(ref);
-    if (!intent) return NextResponse.json({ error: `Unknown intent \`${ref}\`` }, { status: 404 });
-    return NextResponse.json({ ...intent, state: intentState(intent, new Date().toISOString()) });
-  } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 502 });
-  }
-}
+  const intent = await findIntent(ref);
+  if (!intent) throw unknown('intent', ref);
+  return NextResponse.json({ ...intent, state: intentState(intent, new Date().toISOString()) });
+});
 
-export async function POST(request: Request, { params }: Context) {
+export const POST = jsonRoute<typeof scanBody, Context>(scanBody, async (input, { params }) => {
   const { ref } = await params;
-  const payload = await json(request);
-  if (payload === null) {
-    return NextResponse.json({ error: 'Request body is not valid JSON' }, { status: 400 });
-  }
-  const parsed = scanBody.safeParse(payload);
-  if (!parsed.success) return NextResponse.json(badRequest(parsed.error), { status: 400 });
+  const result = await scanIntent(input.payload);
 
-  try {
-    const result = await scanIntent(parsed.data.payload);
-    if (!result.ok) {
-      return NextResponse.json(
-        { ok: false, ref, reason: result.reason, message: result.message },
-        { status: result.status },
-      );
-    }
-    if (result.intent.ref !== ref) {
-      return NextResponse.json(
-        { ok: false, ref, reason: 'mismatch', message: 'Payload belongs to a different intent.' },
-        { status: 401 },
-      );
-    }
-    return NextResponse.json({
-      ok: true,
-      ref: result.intent.ref,
-      merchantId: result.merchantId,
-      amount: result.amount ?? null,
-      kind: result.intent.kind,
-      expiresAt: result.intent.expiresAt,
-    });
-  } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 502 });
+  if (!result.ok) {
+    return NextResponse.json(
+      { ok: false, ref, reason: result.reason, message: result.message },
+      { status: result.status },
+    );
   }
-}
+  if (result.intent.ref !== ref) {
+    return NextResponse.json(
+      { ok: false, ref, reason: 'mismatch', message: 'Payload belongs to a different intent.' },
+      { status: 401 },
+    );
+  }
 
-export async function PATCH(request: Request, { params }: Context) {
+  return NextResponse.json({
+    ok: true,
+    ref: result.intent.ref,
+    merchantId: result.merchantId,
+    amount: result.amount ?? null,
+    kind: result.intent.kind,
+    expiresAt: result.intent.expiresAt,
+  });
+});
+
+export const PATCH = jsonRoute<typeof attachBody, Context>(attachBody, async (input, { params }) => {
   const { ref } = await params;
-  const payload = await json(request);
-  if (payload === null) {
-    return NextResponse.json({ error: 'Request body is not valid JSON' }, { status: 400 });
-  }
-  const parsed = attachBody.safeParse(payload);
-  if (!parsed.success) return NextResponse.json(badRequest(parsed.error), { status: 400 });
-
-  try {
-    await attachDecision(ref, parsed.data.decisionKey);
-    return NextResponse.json({ ok: true, ref, decisionKey: parsed.data.decisionKey });
-  } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 502 });
-  }
-}
+  await attachDecision(ref, input.decisionKey);
+  return NextResponse.json({ ok: true, ref, decisionKey: input.decisionKey });
+});

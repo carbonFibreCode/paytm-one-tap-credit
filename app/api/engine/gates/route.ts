@@ -7,52 +7,19 @@
  */
 
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { buildGateContext } from '@/lib/engine/decide';
 import { runGates } from '@/lib/engine/gates';
 import { getMerchant } from '@/lib/merchants';
-import { badRequest, categoryEnum, nudgeHistoryShape, profileShape, rupees } from '@/lib/api/steps';
+import { gatesBody } from '@/lib/api/schemas';
+import { ApiError, jsonRoute, unknown } from '@/lib/api/route';
 
-const body = z.object({
-  profile: profileShape,
-  amount: rupees,
-  merchantId: z.string().optional(),
-  merchantCategory: categoryEnum.optional(),
-  merchantName: z.string().optional(),
-  merchantCreditEnabled: z.boolean().optional(),
-  timestamp: z.string().optional(),
-  selectedInstrument: z
-    .enum(['upi', 'wallet', 'debit_card', 'credit_card', 'postpaid', 'netbanking'])
-    .optional(),
-  nudgeHistory: nudgeHistoryShape,
-});
-
-export async function POST(request: Request) {
-  let payload: unknown;
-  try {
-    payload = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Request body is not valid JSON' }, { status: 400 });
-  }
-
-  const parsed = body.safeParse(payload);
-  if (!parsed.success) return NextResponse.json(badRequest(parsed.error), { status: 400 });
-  const input = parsed.data;
-
+export const POST = jsonRoute(gatesBody, (input) => {
   const merchant = input.merchantId ? getMerchant(input.merchantId) : undefined;
-  if (input.merchantId && !merchant) {
-    return NextResponse.json(
-      { error: `Unknown merchantId \`${input.merchantId}\`` },
-      { status: 404 },
-    );
-  }
+  if (input.merchantId && !merchant) throw unknown('merchantId', input.merchantId);
 
   const merchantCategory = merchant?.category ?? input.merchantCategory;
   if (!merchantCategory) {
-    return NextResponse.json(
-      { error: 'Provide a known `merchantId`, or a `merchantCategory`' },
-      { status: 400 },
-    );
+    throw new ApiError('Provide a known `merchantId`, or a `merchantCategory`', 400);
   }
 
   const timestamp = input.timestamp ?? new Date().toISOString();
@@ -61,6 +28,7 @@ export async function POST(request: Request) {
     profile: input.profile,
     merchantCreditEnabled: merchant?.creditEnabled ?? input.merchantCreditEnabled !== false,
     request: {
+      // A synthetic id: this stage judges a transaction, it does not record one.
       transactionId: 'stage',
       userId: input.profile.userId,
       amount: input.amount,
@@ -89,4 +57,4 @@ export async function POST(request: Request) {
     minAchievableEmi: Number.isFinite(context.minAchievableEmi) ? context.minAchievableEmi : null,
     timestamp,
   });
-}
+});

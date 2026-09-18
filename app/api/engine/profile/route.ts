@@ -8,39 +8,20 @@
  */
 
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { buildProfileWithLedger, getPersona } from '@/lib/personas';
-import { badRequest } from '@/lib/api/steps';
+import { engineProfileBody } from '@/lib/api/schemas';
+import { jsonRoute, unknown } from '@/lib/api/route';
 import { liveCreditOrEmpty } from '@/lib/credit/store';
 
-const body = z.object({
-  userId: z.string().min(1),
-  timestamp: z.string().optional(),
-  /** Ledger rows are bulky; the workflow only needs them when showing the chain. */
-  includeLedger: z.boolean().optional().default(false),
-});
+/** Ledger rows are bulky; only the tail is ever shown. */
+const LEDGER_PAGE_SIZE = 40;
 
-export async function POST(request: Request) {
-  let payload: unknown;
-  try {
-    payload = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Request body is not valid JSON' }, { status: 400 });
-  }
+export const POST = jsonRoute(engineProfileBody, async (input) => {
+  const persona = getPersona(input.userId);
+  if (!persona) throw unknown('userId', input.userId);
 
-  const parsed = body.safeParse(payload);
-  if (!parsed.success) return NextResponse.json(badRequest(parsed.error), { status: 400 });
-
-  const persona = getPersona(parsed.data.userId);
-  if (!persona) {
-    return NextResponse.json(
-      { error: `Unknown userId \`${parsed.data.userId}\`` },
-      { status: 404 },
-    );
-  }
-
-  const asOf = parsed.data.timestamp ?? new Date().toISOString();
-  const live = await liveCreditOrEmpty(parsed.data.userId);
+  const asOf = input.timestamp ?? new Date().toISOString();
+  const live = await liveCreditOrEmpty(input.userId);
   const { profile, ledger } = buildProfileWithLedger(persona, asOf, live);
 
   return NextResponse.json({
@@ -49,6 +30,6 @@ export async function POST(request: Request) {
     profile,
     liveCredit: live,
     ledgerRows: ledger.length,
-    ...(parsed.data.includeLedger ? { ledger: ledger.slice(-40).reverse() } : {}),
+    ...(input.includeLedger ? { ledger: ledger.slice(-LEDGER_PAGE_SIZE).reverse() } : {}),
   });
-}
+});

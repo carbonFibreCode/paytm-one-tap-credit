@@ -7,35 +7,17 @@
  */
 
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { cogneeConfigured, recallMemory, warmMemory } from '@/lib/memory/cognee';
-import { badRequest } from '@/lib/api/steps';
+import { recallBody } from '@/lib/api/schemas';
+import { jsonRoute } from '@/lib/api/route';
 
-const body = z.object({
-  userId: z.string().min(1),
-  /** Wait for Cognee instead of serving the cache — for warm-ups, not checkout. */
-  warm: z.boolean().optional().default(false),
-});
-
-export async function POST(request: Request) {
-  let payload: unknown;
-  try {
-    payload = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Request body is not valid JSON' }, { status: 400 });
-  }
-
-  const parsed = body.safeParse(payload);
-  if (!parsed.success) return NextResponse.json(badRequest(parsed.error), { status: 400 });
-
-  const memory = parsed.data.warm
-    ? await warmMemory(parsed.data.userId)
-    : await recallMemory(parsed.data.userId);
+export const POST = jsonRoute(recallBody, async ({ userId, warm }) => {
+  const memory = warm ? await warmMemory(userId) : await recallMemory(userId);
 
   return NextResponse.json({
     stage: 'recall',
-    userId: parsed.data.userId,
+    userId,
     memory,
     backend: cogneeConfigured() ? 'cognee' : 'local-audit',
   });
-}
+});

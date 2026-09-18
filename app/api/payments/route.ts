@@ -11,97 +11,47 @@
  */
 
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
-import { badRequest, rupees } from '@/lib/api/steps';
+import { paymentBody } from '@/lib/api/schemas';
+import { ApiError, getRoute, jsonRoute, unknown } from '@/lib/api/route';
 import { clearUser, listPayments, liveCredit, recordPayment } from '@/lib/credit/store';
 import { dbConfigured } from '@/lib/db/client';
 import { getMerchant } from '@/lib/merchants';
 import { getPersona } from '@/lib/personas';
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'must be a YYYY-MM-DD date');
+/** Every route here is per-user; a missing id is a client error, not an empty list. */
+function requireUserId(request: Request): string {
+  const userId = new URL(request.url).searchParams.get('userId');
+  if (!userId) throw new ApiError('`userId` is required', 400);
+  return userId;
+}
 
-/** Mirrors `EmiOption` — the plan exactly as the engine offered it. */
-const tenure = z.object({
-  months: z.number().int().min(1).max(36),
-  emi: rupees,
-  lastEmi: rupees,
-  total: rupees,
-  interest: z.number().int().nonnegative(),
-  noCost: z.boolean(),
-  firstDueDate: isoDate,
+/** The ledger is optional infrastructure: say so rather than failing. */
+function requireDatabase(): void {
+  if (!dbConfigured()) throw new ApiError('database not configured', 503);
+}
+
+export const POST = jsonRoute(paymentBody, async (input) => {
+  if (!getPersona(input.userId)) throw unknown('userId', input.userId);
+  requireDatabase();
+
+  const result = await recordPayment({
+    ...input,
+    merchantName: input.merchantName ?? getMerchant(input.merchantId)?.name ?? 'Merchant',
+    at: input.at ?? new Date().toISOString(),
+  });
+  return NextResponse.json({ stored: result !== null, ...result });
 });
 
-const body = z.object({
-  userId: z.string().min(1),
-  merchantId: z.string().min(1),
-  merchantName: z.string().min(1).optional(),
-  decisionKey: z.string().min(1).optional(),
-  intentRef: z.string().min(1).optional(),
-  amount: rupees,
-  method: z.enum(['upi', 'wallet', 'postpaid', 'card']),
-  partner: z.string().min(1).optional(),
-  tenure: tenure.optional(),
-  at: z.string().optional(),
+export const GET = getRoute(async (request) => {
+  const userId = requireUserId(request);
+  if (!getPersona(userId)) throw unknown('userId', userId);
+
+  const [payments, live] = await Promise.all([listPayments(userId), liveCredit(userId)]);
+  return NextResponse.json({ userId, database: dbConfigured(), payments, live });
 });
 
-function userIdFrom(request: Request): string | null {
-  return new URL(request.url).searchParams.get('userId');
-}
-
-export async function POST(request: Request) {
-  let payload: unknown;
-  try {
-    payload = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Request body is not valid JSON' }, { status: 400 });
-  }
-
-  const parsed = body.safeParse(payload);
-  if (!parsed.success) return NextResponse.json(badRequest(parsed.error), { status: 400 });
-
-  const input = parsed.data;
-  if (!getPersona(input.userId)) {
-    return NextResponse.json({ error: `Unknown userId \`${input.userId}\`` }, { status: 404 });
-  }
-  if (!dbConfigured()) {
-    return NextResponse.json({ stored: false, reason: 'database not configured' });
-  }
-
-  try {
-    const result = await recordPayment({
-      ...input,
-      merchantName: input.merchantName ?? getMerchant(input.merchantId)?.name ?? 'Merchant',
-      at: input.at ?? new Date().toISOString(),
-    });
-    return NextResponse.json({ stored: result !== null, ...result });
-  } catch (error) {
-    return NextResponse.json({ stored: false, error: (error as Error).message }, { status: 502 });
-  }
-}
-
-export async function GET(request: Request) {
-  const userId = userIdFrom(request);
-  if (!userId) return NextResponse.json({ error: '`userId` is required' }, { status: 400 });
-  if (!getPersona(userId)) {
-    return NextResponse.json({ error: `Unknown userId \`${userId}\`` }, { status: 404 });
-  }
-
-  try {
-    const [rows, live] = await Promise.all([listPayments(userId), liveCredit(userId)]);
-    return NextResponse.json({ userId, database: dbConfigured(), payments: rows, live });
-  } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 502 });
-  }
-}
-
-export async function DELETE(request: Request) {
-  const userId = userIdFrom(request);
-  if (!userId) return NextResponse.json({ error: '`userId` is required' }, { status: 400 });
-
-  try {
-    await clearUser(userId);
-    return NextResponse.json({ cleared: true, userId });
-  } catch (error) {
-    return NextResponse.json({ cleared: false, error: (error as Error).message }, { status: 502 });
-  }
-}
+export const DELETE = getRoute(async (request) => {
+  const userId = requireUserId(request);
+  await clearUser(userId);
+  return NextResponse.json({ cleared: true, userId });
+});

@@ -1,10 +1,44 @@
+/**
+ * Validation behaviour at the API boundary.
+ *
+ * Ported from the `Validated<T>` union to the schema-plus-resolver pair the
+ * routes now use: Zod handles shape (400), `resolveDecideRequest` handles
+ * identity (404) and the either/or merchant rule.
+ */
+
 import { describe, expect, test } from 'vitest';
-import { parseDecideRequest, parseNudgeTextRequest } from '../lib/api/validate';
+import {
+  decideBody,
+  nudgeTextBody,
+  resolveDecideRequest,
+  type DecideInputs,
+} from '../lib/api/schemas';
+import { ApiError } from '../lib/api/route';
+import { firstIssue } from '../lib/schemas';
 
 const NOW = '2026-09-19T14:30:00+05:30';
 
-function decide(body: unknown) {
-  return parseDecideRequest(body, NOW);
+type Outcome =
+  | { ok: true; value: DecideInputs }
+  | { ok: false; status: number; error: string };
+
+/** Mirrors what a route does: parse, then resolve, reporting either failure. */
+function decide(body: unknown): Outcome {
+  const parsed = decideBody.safeParse(body);
+  if (!parsed.success) return { ok: false, status: 400, error: firstIssue(parsed.error) };
+  try {
+    return { ok: true, value: resolveDecideRequest(parsed.data, NOW) };
+  } catch (error) {
+    if (error instanceof ApiError) return { ok: false, status: error.status, error: error.message };
+    throw error;
+  }
+}
+
+function nudgeText(body: unknown) {
+  const parsed = nudgeTextBody.safeParse(body);
+  return parsed.success
+    ? ({ ok: true, value: parsed.data } as const)
+    : ({ ok: false, status: 400, error: firstIssue(parsed.error) } as const);
 }
 
 const valid = { userId: 'u_rohit', merchantId: 'm_kroma', amount: 50_000 };
@@ -76,6 +110,12 @@ describe('/api/decide validation', () => {
     expect(result.value.request.nudgeHistory).toHaveLength(1);
     expect(result.value.request.nudgeHistory?.[0].outcome).toBe('declined');
   });
+
+  test('carries a scanned intent reference through to the engine request', () => {
+    const result = decide({ ...valid, intentRef: 'OTCDKROMA0123456789' });
+    if (!result.ok) throw new Error('expected success');
+    expect(result.value.request.intentRef).toBe('OTCDKROMA0123456789');
+  });
 });
 
 describe('/api/nudge-text validation', () => {
@@ -88,7 +128,7 @@ describe('/api/nudge-text validation', () => {
   };
 
   test('fills in defaults for the optional fields', () => {
-    const result = parseNudgeTextRequest(validCopy);
+    const result = nudgeText(validCopy);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.language).toBe('en');
@@ -103,7 +143,7 @@ describe('/api/nudge-text validation', () => {
     [{ ...validCopy, emi: 0 }, /emi/],
     [{ ...validCopy, merchantCategory: 'nope' }, /merchantCategory/],
   ])('rejects %j', (body, pattern) => {
-    const result = parseNudgeTextRequest(body);
+    const result = nudgeText(body);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.status).toBe(400);
@@ -111,7 +151,6 @@ describe('/api/nudge-text validation', () => {
   });
 
   test('an unknown language falls back to English rather than failing', () => {
-    const result = parseNudgeTextRequest({ ...validCopy, language: 'fr' });
-    expect(result.ok).toBe(false);
+    expect(nudgeText({ ...validCopy, language: 'fr' }).ok).toBe(false);
   });
 });
