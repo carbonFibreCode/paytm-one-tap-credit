@@ -148,9 +148,18 @@ function buildPrompt(context: NudgeContext): { system: string; user: string } {
     'Rules, all mandatory:',
     '- Reply with ONE line of plain text. No quotes, no emoji, no preamble, no explanation.',
     '- Under 140 characters.',
+    '- The transaction amount MUST appear, written exactly as given. Copy without it is rejected.',
     '- Use ONLY the figures given to you. Never introduce an interest rate, a credit limit, a discount, a deadline or any other number.',
     '- Never promise approval, and never imply the user must take the offer.',
-    '- Warm and matter-of-fact. It is a helpful suggestion, not an advertisement.',
+    '',
+    'Voice: speak to the person about their situation, do not read the offer back to',
+    'them. Lead with what it does for them — keeping their balance intact, not paying',
+    'it all today — and let the figures follow. Vary how you open.',
+    '',
+    'Every example below carries the amount, and so must your line:',
+    'Too flat: "Pay <amount> at <merchant> via <product> in <n> instalments of <emi>."',
+    'Better:   "No need to pay <amount> today — <product> splits it into <n> of <emi>."',
+    'Better:   "Keep your balance where it is; <amount> becomes <n> instalments of <emi>."',
   ].join('\n');
 
   const costLine = context.noCost
