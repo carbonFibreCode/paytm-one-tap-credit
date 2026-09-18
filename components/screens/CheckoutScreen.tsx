@@ -3,18 +3,22 @@
 /**
  * The checkout screen — where the whole idea lives or dies.
  *
- * The keypad is functional rather than decorative: changing the amount re-runs
- * the engine live, so the nudge appearing and disappearing as you type is the
- * most convincing thing in the demo.
+ * The layout is built so the keypad can never move. Everything that changes —
+ * the amount, the nudge, the engine strip — lives in a flexible middle region,
+ * while the pay button and keypad are pinned below it. Before this, a nudge
+ * appearing would push the keys down mid-tap and the wrong digit got pressed.
+ *
+ * Amount changes are debounced before they reach the engine, so holding down a
+ * key fires one decision rather than six.
  */
 
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { BadgeCheck, ChevronRight } from 'lucide-react';
 import type { Instrument } from '@/lib/types';
 import { useApp } from '@/lib/client/state';
-import { formatINR, humaniseGate } from '@/lib/format';
+import { amountInWords, formatINR, humaniseGate } from '@/lib/format';
 import { personOrDefault } from '@/lib/people';
-import { AppBar, Monogram, Pill, StatusBar } from '../Chrome';
+import { AppBar, Monogram, Pill } from '../Chrome';
 import { NudgeCard } from '../NudgeCard';
 
 const METHODS: Array<{ id: Instrument; label: string }> = [
@@ -25,34 +29,20 @@ const METHODS: Array<{ id: Instrument; label: string }> = [
 
 export function CheckoutScreen() {
   const {
-    merchant,
-    amount,
-    setAmount,
-    instrument,
-    setInstrument,
-    decision,
-    decisionLoading,
-    decisionError,
-    nudgeCopy,
-    nudgeCopyLoading,
-    nudgeDismissed,
-    acceptNudge,
-    declineNudge,
-    payNormally,
-    go,
-    toggleDrawer,
-    userId,
+    merchant, amount, setAmount, instrument, setInstrument,
+    decision, decisionLoading, decisionError,
+    nudgeCopy, nudgeCopyLoading, nudgeDismissed,
+    acceptNudge, declineNudge, payNormally, go, toggleDrawer, userId,
   } = useApp();
 
   const person = personOrDefault(userId);
-
   if (!merchant) return null;
 
   const showNudge = Boolean(decision?.showNudge && decision.offer) && !nudgeDismissed;
 
-  // The wallet holds a finite balance; UPI draws on the linked bank account, so
-  // only the wallet can actually run short. That shortfall is precisely the
-  // moment a credit offer is worth something.
+  // The wallet holds a finite balance; UPI draws on the linked bank, so only the
+  // wallet can actually run short — and that shortfall is exactly the moment a
+  // credit offer is worth something.
   const shortOnWallet = instrument === 'wallet' && amount > person.balance;
 
   const fundingSource =
@@ -63,18 +53,13 @@ export function CheckoutScreen() {
         : `${person.bankName} Debit ••${person.bankLast4}`;
 
   const press = (key: string) => {
-    if (key === 'back') {
-      setAmount(Math.floor(amount / 10));
-      return;
-    }
+    if (key === 'back') return setAmount(Math.floor(amount / 10));
     const next = Number(`${amount}${key}`);
-    // Keep the amount inside something a checkout could plausibly show.
     if (next <= 1_00_00_000) setAmount(next);
   };
 
   return (
-    <div className="relative flex h-full flex-col">
-      <StatusBar />
+    <div className="flex h-full flex-col">
       <AppBar
         title="Payment"
         onBack={() => go('home')}
@@ -89,8 +74,10 @@ export function CheckoutScreen() {
         }
       />
 
-      <div className="flex flex-col items-center px-5 pt-1">
-        <Monogram text={merchant.monogram} tint={merchant.tint} size={48} />
+      {/* Flexible middle. Everything that can change size lives here, so the
+          keypad below it never shifts under the user's thumb. */}
+      <div className="scroll-none flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-5 pb-2">
+        <Monogram text={merchant.monogram} tint={merchant.tint} size={44} />
         <p className="mt-2 flex items-center gap-1 text-[14px] font-semibold text-body">
           {merchant.name}
           {merchant.creditEnabled ? (
@@ -99,17 +86,32 @@ export function CheckoutScreen() {
         </p>
         <p className="text-[10px] text-muted">Verified name · A/c linked on Paytm</p>
 
-        <div className="mt-5 flex items-start gap-1">
-          <span className="mt-2 text-[24px] font-light text-muted">₹</span>
-          <span className="text-[44px] font-semibold leading-none tracking-tight text-white tabular-nums">
+        <div className="mt-4 flex items-start gap-1">
+          <span className="mt-2 text-[22px] font-light text-muted">₹</span>
+          <span className="text-[40px] font-semibold leading-none tracking-tight text-white tabular-nums">
             {amount.toLocaleString('en-IN')}
           </span>
         </div>
-        <p className="mt-1 h-4 text-[10px] text-faint">
-          {decisionLoading ? 'Checking eligibility…' : decision ? `${decision.score}/100 relevance` : ''}
-        </p>
+        <p className="mt-1.5 h-4 text-center text-[10px] text-faint">{amountInWords(amount)}</p>
 
-        <div className="mt-4 flex gap-2">
+        <div className="mt-4 w-full">
+          <AnimatePresence mode="wait">
+            {showNudge && decision ? (
+              <NudgeCard
+                key="nudge"
+                decision={decision}
+                copy={nudgeCopy}
+                copyLoading={nudgeCopyLoading}
+                onAccept={acceptNudge}
+                onDecline={declineNudge}
+              />
+            ) : decision && !decision.showNudge && !decisionLoading ? (
+              <EngineStrip key="engine" />
+            ) : null}
+          </AnimatePresence>
+        </div>
+
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
           {METHODS.map((method) => (
             <button
               key={method.id}
@@ -125,68 +127,40 @@ export function CheckoutScreen() {
             </button>
           ))}
         </div>
+        <p className="mt-2 text-center text-[10px] text-faint">{fundingSource}</p>
 
-        <p className="mt-2 text-[10px] text-faint">{fundingSource}</p>
-      </div>
-
-      <div className="flex-1" />
-
-      {decisionError ? (
-        <p className="mx-5 mb-2 rounded-xl border border-bad/30 bg-bad/10 p-2 text-[11px] text-bad">
-          Could not score this transaction — {decisionError}
-        </p>
-      ) : null}
-
-      <Keypad onPress={press} />
-
-      <div className="px-5 pb-5">
-        <button
-          type="button"
-          onClick={payNormally}
-          disabled={shortOnWallet}
-          className="w-full rounded-2xl bg-brand-deep py-3.5 text-[15px] font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-elevated disabled:text-faint"
-        >
-          {shortOnWallet ? 'Insufficient Paytm Balance' : 'Proceed securely'}
-        </button>
-        {shortOnWallet ? (
-          <p className="mt-1.5 text-center text-[10px] text-warn">
-            Short by {formatINR(amount - person.balance)}. Switch to UPI, or use the offer below.
+        {decisionError ? (
+          <p className="mt-2 w-full rounded-xl border border-bad/30 bg-bad/10 p-2 text-[11px] text-bad">
+            Could not score this transaction — {decisionError}
           </p>
         ) : null}
       </div>
 
-      {/* The engine's decision when it chose not to interrupt. Marked as a
-          developer overlay — a real checkout would show nothing at all. */}
-      {decision && !decision.showNudge && !decisionLoading ? (
-        <EngineStrip />
-      ) : null}
-
-      <div className="pointer-events-none absolute inset-x-0 bottom-0">
-        <AnimatePresence>
-          {showNudge && decision ? (
-            <NudgeCard
-              key="nudge"
-              decision={decision}
-              copy={nudgeCopy}
-              copyLoading={nudgeCopyLoading}
-              amount={amount}
-              onAccept={acceptNudge}
-              onDecline={declineNudge}
-            />
+      {/* Pinned. Never moves. */}
+      <div className="shrink-0">
+        <div className="px-5 pb-3">
+          <button
+            type="button"
+            onClick={payNormally}
+            disabled={shortOnWallet || amount <= 0}
+            className="w-full rounded-2xl bg-brand-deep py-3.5 text-[15px] font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-elevated disabled:text-faint"
+          >
+            {shortOnWallet ? 'Insufficient Paytm Balance' : 'Proceed securely'}
+          </button>
+          {shortOnWallet ? (
+            <p className="mt-1.5 text-center text-[10px] text-warn">
+              Short by {formatINR(amount - person.balance)}. Switch to UPI, or use the offer above.
+            </p>
           ) : null}
-        </AnimatePresence>
+        </div>
+
+        <Keypad onPress={press} />
       </div>
     </div>
   );
 }
 
-/**
- * Visible proof that the engine ran and chose silence.
- *
- * One tappable row and nothing more — the reasoning belongs in its own window,
- * not unfolded over a payment screen. The only inline action is the reset,
- * because a frequency cap hit mid-demo needs recovering in one tap.
- */
+/** Visible proof that the engine ran and chose silence. */
 function EngineStrip() {
   const { decision, clearHistory, toggleTrace } = useApp();
   if (!decision) return null;
@@ -194,25 +168,18 @@ function EngineStrip() {
   const capped = decision.blockedBy === 'FREQUENCY_CAP';
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="mx-5 mb-5 flex items-center gap-2 rounded-2xl border border-dashed border-line bg-surface/70 p-3"
-    >
+    <div className="flex w-full items-center gap-2 rounded-2xl border border-dashed border-line bg-surface/70 p-2.5">
       <Pill>engine</Pill>
-
       <button
         type="button"
         onClick={() => toggleTrace(true)}
         className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
       >
         <span className="min-w-0 flex-1 truncate text-[11px] text-muted">
-          No nudge &middot;{' '}
-          {decision.blockedBy ? humaniseGate(decision.blockedBy) : 'below threshold'}
+          No nudge · {decision.blockedBy ? humaniseGate(decision.blockedBy) : 'below threshold'}
         </span>
         <ChevronRight size={14} className="shrink-0 text-faint" />
       </button>
-
       {capped ? (
         <button
           type="button"
@@ -222,24 +189,24 @@ function EngineStrip() {
           Reset
         </button>
       ) : null}
-    </motion.div>
+    </div>
   );
 }
 
 function Keypad({ onPress }: { onPress: (key: string) => void }) {
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'back'];
   return (
-    <div className="grid shrink-0 grid-cols-3 gap-px border-y border-line bg-line/40">
+    <div className="grid shrink-0 grid-cols-3 gap-px border-t border-line bg-line/40">
       {keys.map((key, index) =>
         key === '' ? (
-          <div key={index} className="bg-ink py-3.5" />
+          <div key={index} className="bg-ink py-3" />
         ) : (
           <button
             key={index}
             type="button"
             onClick={() => onPress(key)}
             aria-label={key === 'back' ? 'Delete last digit' : key}
-            className="bg-ink py-3.5 text-[19px] font-medium text-body transition active:bg-elevated"
+            className="bg-ink py-3 text-[19px] font-medium text-body transition active:bg-elevated"
           >
             {key === 'back' ? '⌫' : key}
           </button>

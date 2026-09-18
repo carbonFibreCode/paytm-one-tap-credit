@@ -13,7 +13,6 @@
  * of the chain, a derived eligibility signal on the right.
  */
 
-import { AnimatePresence, motion } from 'framer-motion';
 import type { Language } from '@/lib/types';
 import { useApp } from '@/lib/client/state';
 import { useProfile, type ProfilePayload } from '@/lib/client/useProfile';
@@ -22,6 +21,7 @@ import { PEOPLE } from '@/lib/people';
 import { LANGUAGE_NAMES } from '@/lib/nudge/templates';
 import { formatINR, formatShortDate } from '@/lib/format';
 import { Pill } from './Chrome';
+import { Sheet } from './Sheet';
 
 const QUICK_AMOUNTS = [450, 12_000, 50_000, 80_000, 1_20_000, 2_50_000];
 
@@ -50,40 +50,24 @@ export function DemoDrawer() {
   const profile = useProfile(userId, drawerOpen);
 
   return (
-    <AnimatePresence>
-      {drawerOpen ? (
-        <>
-          <motion.button
+    <Sheet
+      open={drawerOpen}
+      onClose={() => toggleDrawer(false)}
+      label="Demo controls"
+      header={
+        <div className="flex items-center gap-2 px-5 pb-2 pt-1">
+          <h2 className="flex-1 text-[14px] font-semibold text-body">Demo controls</h2>
+          <button
             type="button"
-            aria-label="Close demo controls"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
             onClick={() => toggleDrawer(false)}
-            className="absolute inset-0 z-40 bg-black/60"
-          />
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 280, damping: 30 }}
-            className="absolute inset-x-0 bottom-0 z-50 flex max-h-[88%] flex-col rounded-t-3xl border-t border-line bg-surface"
+            className="rounded-lg px-2 py-1 text-[11px] text-muted hover:text-body"
           >
-            <div className="shrink-0 px-5 pb-2 pt-3">
-              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/15" />
-              <div className="flex items-center gap-2">
-                <h2 className="flex-1 text-[14px] font-semibold text-body">Demo controls</h2>
-                <button
-                  type="button"
-                  onClick={() => toggleDrawer(false)}
-                  className="rounded-lg px-2 py-1 text-[11px] text-muted hover:text-body"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-
-            <div className="scroll-slim flex-1 space-y-5 overflow-y-auto px-5 pb-6">
+            Close
+          </button>
+        </div>
+      }
+    >
+      <div className="scroll-slim flex-1 space-y-5 overflow-y-auto px-5 pb-6">
               <Section title="Who is paying">
                 <div className="grid grid-cols-2 gap-2">
                   {PEOPLE.map((person) => (
@@ -234,11 +218,8 @@ export function DemoDrawer() {
                   </div>
                 )}
               </Section>
-            </div>
-          </motion.div>
-        </>
-      ) : null}
-    </AnimatePresence>
+      </div>
+    </Sheet>
   );
 }
 

@@ -11,12 +11,12 @@ import { History, House, Tag, UserRound } from 'lucide-react';
 import { useApp } from '@/lib/client/state';
 import type { Screen } from '@/lib/client/state';
 
-export function BottomNav({ active }: { active: 'home' | 'scanner' }) {
+export function BottomNav({ active }: { active: 'home' | 'scanner' | 'history' }) {
   const { go } = useApp();
 
   const items: Array<{ icon: typeof House; label: string; screen?: Screen }> = [
     { icon: House, label: 'Home', screen: 'home' },
-    { icon: History, label: 'History' },
+    { icon: History, label: 'History', screen: 'history' },
     { icon: Tag, label: 'Offers' },
     { icon: UserRound, label: 'Profile', screen: 'persona' },
   ];

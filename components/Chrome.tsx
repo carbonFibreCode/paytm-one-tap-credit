@@ -9,7 +9,7 @@
  */
 
 import type { ReactNode } from 'react';
-import { BatteryFull, ChevronLeft, SignalHigh, Wifi } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 
 export function PhoneFrame({ children }: { children: ReactNode }) {
   return (
@@ -25,19 +25,6 @@ export function PhoneFrame({ children }: { children: ReactNode }) {
         <div className="pointer-events-none absolute left-1/2 top-0 z-50 hidden h-6 w-32 -translate-x-1/2 rounded-b-2xl bg-[#1a2132] sm:block" />
         {children}
       </div>
-    </div>
-  );
-}
-
-export function StatusBar() {
-  return (
-    <div className="flex shrink-0 items-center justify-between px-6 pb-1 pt-3 text-[11px] font-medium text-body/80">
-      <span>12:23</span>
-      <span className="flex items-center gap-1.5">
-        <SignalHigh size={14} strokeWidth={2.4} />
-        <Wifi size={13} strokeWidth={2.4} />
-        <BatteryFull size={18} strokeWidth={1.8} />
-      </span>
     </div>
   );
 }

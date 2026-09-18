@@ -9,6 +9,7 @@ import { DecisionSheet } from './DecisionSheet';
 import { PersonaScreen } from './screens/PersonaScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { ScannerScreen } from './screens/ScannerScreen';
+import { HistoryScreen } from './screens/HistoryScreen';
 import { CheckoutScreen } from './screens/CheckoutScreen';
 import { ApprovedScreen } from './screens/ApprovedScreen';
 import { SuccessScreen } from './screens/SuccessScreen';
@@ -43,6 +44,7 @@ function Screens() {
           {screen === 'persona' ? <PersonaScreen /> : null}
           {screen === 'home' ? <HomeScreen /> : null}
           {screen === 'scanner' ? <ScannerScreen /> : null}
+          {screen === 'history' ? <HistoryScreen /> : null}
           {screen === 'checkout' ? <CheckoutScreen /> : null}
           {screen === 'approved' ? <ApprovedScreen /> : null}
           {screen === 'success' ? <SuccessScreen /> : null}

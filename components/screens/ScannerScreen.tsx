@@ -3,46 +3,126 @@
 /**
  * Scan & Pay.
  *
- * There is no camera here — tapping a merchant below simulates a QR lock-on and
- * routes into the same checkout the merchant list uses. It exists because
- * scanning is how most Paytm payments actually start, and a credit nudge that
- * only appears from a list would feel like a prototype rather than the app.
+ * Uses the real camera where it is available, and decodes QR codes through the
+ * browser's built-in `BarcodeDetector` when the platform ships it (Chrome on
+ * Android and desktop). No scanning library — the platform already has one.
+ *
+ * Three things have to degrade gracefully, because a demo cannot depend on any
+ * of them: camera permission may be denied, `getUserMedia` needs HTTPS (or
+ * localhost), and Safari has no `BarcodeDetector`. In every one of those cases
+ * the merchant list below still works, so the flow is never blocked.
  */
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, Images, Zap } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Camera, CameraOff, ChevronLeft, Images, Zap } from 'lucide-react';
 import { MERCHANTS } from '@/lib/merchants';
 import { useApp } from '@/lib/client/state';
 import { formatINR } from '@/lib/format';
-import { Monogram, StatusBar } from '../Chrome';
+import { Monogram } from '../Chrome';
 import { BottomNav } from '../BottomNav';
 
-/** How long the lock-on animation holds before the checkout opens. */
+/** How long the lock-on animation holds before checkout opens. */
 const LOCK_ON_MS = 700;
+const SCAN_INTERVAL_MS = 400;
+
+type CameraState = 'idle' | 'starting' | 'live' | 'denied' | 'unsupported';
 
 export function ScannerScreen() {
   const { selectMerchant, go } = useApp();
   const [locked, setLocked] = useState<string | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [camera, setCamera] = useState<CameraState>('idle');
+  const [canDecode, setCanDecode] = useState(false);
 
-  // A pending lock-on must not fire after the screen is gone.
-  useEffect(() => () => {
-    if (timer.current) clearTimeout(timer.current);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const lockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const lockOn = useCallback(
+    (merchantId: string) => {
+      setLocked((current) => {
+        if (current) return current;
+        lockTimer.current = setTimeout(() => selectMerchant(merchantId), LOCK_ON_MS);
+        return merchantId;
+      });
+    },
+    [selectMerchant],
+  );
+
+  const stopCamera = useCallback(() => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
   }, []);
 
-  const scan = (merchantId: string) => {
-    if (locked) return;
-    setLocked(merchantId);
-    timer.current = setTimeout(() => selectMerchant(merchantId), LOCK_ON_MS);
-  };
+  const startCamera = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) return setCamera('unsupported');
+    setCamera('starting');
+    try {
+      // Rear camera on a phone; falls back to whatever exists on a laptop.
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => {});
+      }
+      setCamera('live');
+      setCanDecode('BarcodeDetector' in window);
+    } catch {
+      setCamera('denied');
+    }
+  }, []);
+
+  // Release the camera when leaving, and never let a pending lock-on fire late.
+  useEffect(
+    () => () => {
+      stopCamera();
+      if (lockTimer.current) clearTimeout(lockTimer.current);
+    },
+    [stopCamera],
+  );
+
+  // Poll frames for a QR code while the camera is live.
+  useEffect(() => {
+    if (camera !== 'live' || !canDecode || locked) return;
+
+    let cancelled = false;
+    let detector: { detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>> };
+    try {
+      const Detector = (window as unknown as Record<string, new (options: unknown) => typeof detector>)
+        .BarcodeDetector;
+      detector = new Detector({ formats: ['qr_code'] });
+    } catch {
+      setCanDecode(false);
+      return;
+    }
+
+    const timer = setInterval(async () => {
+      const video = videoRef.current;
+      if (cancelled || !video || video.readyState < 2) return;
+      try {
+        const codes = await detector.detect(video);
+        const value = codes[0]?.rawValue;
+        if (!value) return;
+        const matched = matchMerchant(value);
+        if (matched) lockOn(matched);
+      } catch {
+        // A single failed frame is not worth reporting.
+      }
+    }, SCAN_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [camera, canDecode, locked, lockOn]);
 
   const lockedMerchant = MERCHANTS.find((merchant) => merchant.id === locked);
 
   return (
     <div className="flex h-full flex-col bg-black">
-      <StatusBar />
-
       <div className="flex shrink-0 items-center gap-3 px-4 py-2">
         <button
           type="button"
@@ -58,8 +138,17 @@ export function ScannerScreen() {
       </div>
 
       {/* --- viewfinder --- */}
-      <div className="relative mx-auto mt-2 aspect-square w-[74%] shrink-0">
-        <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-[#12203a] via-[#0a1424] to-black" />
+      <div className="relative mx-auto mt-1 aspect-square w-[74%] shrink-0 overflow-hidden rounded-3xl">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#12203a] via-[#0a1424] to-black" />
+
+        <video
+          ref={videoRef}
+          playsInline
+          muted
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
+            camera === 'live' ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
 
         {[
           'left-0 top-0 border-l-4 border-t-4 rounded-tl-3xl',
@@ -70,7 +159,6 @@ export function ScannerScreen() {
           <span key={corner} className={`absolute h-10 w-10 border-brand ${corner}`} />
         ))}
 
-        {/* sweeping scan line */}
         {!locked ? (
           <motion.div
             initial={{ top: '8%' }}
@@ -86,25 +174,50 @@ export function ScannerScreen() {
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 flex flex-col items-center justify-center gap-2"
+              className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/70"
             >
               <Monogram text={lockedMerchant.monogram} tint={lockedMerchant.tint} size={56} />
               <p className="text-[13px] font-semibold text-white">{lockedMerchant.name}</p>
               <p className="text-[10px] text-brand">QR detected</p>
             </motion.div>
-          ) : (
-            <motion.p
+          ) : camera !== 'live' ? (
+            <motion.div
               exit={{ opacity: 0 }}
-              className="absolute inset-x-0 bottom-5 text-center text-[11px] text-white/50"
+              className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center"
             >
-              Align the QR code within the frame
-            </motion.p>
-          )}
+              {camera === 'denied' || camera === 'unsupported' ? (
+                <>
+                  <CameraOff size={26} className="text-white/40" />
+                  <p className="text-[11px] leading-relaxed text-white/50">
+                    {camera === 'denied'
+                      ? 'Camera permission was declined. Pick a merchant below instead.'
+                      : 'This browser cannot open the camera. Pick a merchant below instead.'}
+                  </p>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={startCamera}
+                  disabled={camera === 'starting'}
+                  className="flex items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-[12px] font-semibold text-[#03253a] transition active:scale-95 disabled:opacity-60"
+                >
+                  <Camera size={15} />
+                  {camera === 'starting' ? 'Opening camera…' : 'Enable camera'}
+                </button>
+              )}
+            </motion.div>
+          ) : null}
         </AnimatePresence>
+
+        {camera === 'live' && !locked ? (
+          <p className="absolute inset-x-0 bottom-4 text-center text-[10px] text-white/70">
+            {canDecode ? 'Point at a QR code' : 'Camera on · tap a merchant below to simulate a scan'}
+          </p>
+        ) : null}
       </div>
 
       {/* --- simulated nearby QRs --- */}
-      <div className="scroll-slim mt-4 flex-1 overflow-y-auto px-4 pb-24">
+      <div className="scroll-slim mt-3 flex-1 overflow-y-auto px-4 pb-24">
         <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-white/40">
           Nearby merchant QRs &mdash; tap to scan
         </p>
@@ -113,7 +226,7 @@ export function ScannerScreen() {
             <button
               key={merchant.id}
               type="button"
-              onClick={() => scan(merchant.id)}
+              onClick={() => lockOn(merchant.id)}
               disabled={Boolean(locked)}
               className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-2.5 text-left transition hover:bg-white/10 active:scale-[0.99] disabled:opacity-40"
             >
@@ -135,4 +248,20 @@ export function ScannerScreen() {
       <BottomNav active="scanner" />
     </div>
   );
+}
+
+/**
+ * Map a scanned QR payload onto one of our merchants.
+ *
+ * Handles a UPI intent string (`upi://pay?pa=…&pn=Kroma Electronics`) as well as
+ * plain text, and falls back to the headline merchant so a real-world QR still
+ * demonstrates the flow rather than dead-ending.
+ */
+function matchMerchant(raw: string): string | null {
+  const text = raw.toLowerCase();
+  const byName = MERCHANTS.find((merchant) => text.includes(merchant.name.toLowerCase()));
+  if (byName) return byName.id;
+  const byId = MERCHANTS.find((merchant) => text.includes(merchant.id));
+  if (byId) return byId.id;
+  return text.startsWith('upi://') ? MERCHANTS[0].id : null;
 }

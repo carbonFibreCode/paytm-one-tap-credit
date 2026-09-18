@@ -13,6 +13,7 @@
  */
 
 import { motion } from 'framer-motion';
+import { useState } from 'react';
 import {
   Bell,
   Car,
@@ -21,7 +22,7 @@ import {
   Droplets,
   Flame,
   Info,
-  History,
+  Wallet,
   Landmark,
   Lightbulb,
   QrCode,
@@ -36,15 +37,16 @@ import { MERCHANTS } from '@/lib/merchants';
 import { personOrDefault } from '@/lib/people';
 import { useApp } from '@/lib/client/state';
 import { formatINR } from '@/lib/format';
-import { Monogram, StatusBar } from '../Chrome';
+import { Monogram } from '../Chrome';
 import { BottomNav } from '../BottomNav';
+import { Sheet } from '../Sheet';
 import { PaytmWordmark } from './PersonaScreen';
 
-const MONEY_TRANSFER: Array<{ icon: LucideIcon; label: string }> = [
+const MONEY_TRANSFER: Array<{ icon: LucideIcon; label: string; action?: 'balance' }> = [
   { icon: Smartphone, label: 'To Mobile' },
   { icon: Landmark, label: 'To Bank' },
   { icon: UserRound, label: 'To Self' },
-  { icon: History, label: 'Balance' },
+  { icon: Wallet, label: 'Balance', action: 'balance' },
 ];
 
 const BILLS: Array<{ icon: LucideIcon; label: string; tint: string }> = [
@@ -61,12 +63,12 @@ const BILLS: Array<{ icon: LucideIcon; label: string; tint: string }> = [
 export function HomeScreen() {
   const { selectMerchant, userId, go, toggleDrawer, toggleInfo } = useApp();
   const person = personOrDefault(userId);
+  const [balanceOpen, setBalanceOpen] = useState(false);
 
   return (
     <div className="flex h-full flex-col">
       {/* --- header --- */}
       <div className="shrink-0 bg-gradient-to-b from-brand-deep to-[#071736]">
-        <StatusBar />
         <div className="flex items-center gap-3 px-4 pb-3 pt-1">
           <button
             type="button"
@@ -114,35 +116,21 @@ export function HomeScreen() {
 
       {/* --- scrolling body --- */}
       <div className="scroll-slim flex-1 overflow-y-auto pb-24">
-        {/* balance strip */}
-        <div className="-mt-1 px-4">
-          <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-3.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand/15 text-brand">
-              <QrCode size={17} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] text-muted">Paytm Balance</p>
-              <p className="text-[15px] font-semibold text-body">{formatINR(person.balance)}</p>
-            </div>
-            <div className="min-w-0 text-right">
-              <p className="text-[10px] text-muted">UPI linked</p>
-              <p className="truncate text-[11px] font-medium text-body">
-                {person.bankName} &bull;&bull;{person.bankLast4}
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* money transfer */}
         <Section title="Money Transfer">
           <div className="grid grid-cols-4 gap-2">
-            {MONEY_TRANSFER.map(({ icon: Icon, label }) => (
-              <div key={label} className="flex flex-col items-center gap-1.5">
+            {MONEY_TRANSFER.map(({ icon: Icon, label, action }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={action === 'balance' ? () => setBalanceOpen(true) : undefined}
+                className="flex flex-col items-center gap-1.5 transition active:scale-95"
+              >
                 <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-line bg-surface text-brand">
                   <Icon size={19} />
                 </span>
                 <span className="text-center text-[10px] leading-tight text-muted">{label}</span>
-              </div>
+              </button>
             ))}
           </div>
         </Section>
@@ -228,6 +216,57 @@ export function HomeScreen() {
           Only the merchant list and scanner are wired; the rest is visual.
         </p>
       </div>
+
+      <Sheet
+        open={balanceOpen}
+        onClose={() => setBalanceOpen(false)}
+        label="Paytm Balance"
+        maxHeightClass="max-h-[60%]"
+        header={
+          <div className="flex items-center gap-2 px-5 pb-2 pt-1">
+            <h2 className="flex-1 text-[14px] font-semibold text-body">Balance &amp; accounts</h2>
+            <button
+              type="button"
+              onClick={() => setBalanceOpen(false)}
+              className="rounded-lg px-2 py-1 text-[11px] text-muted hover:text-body"
+            >
+              Close
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3 px-5 pb-6 pt-2">
+          <div className="rounded-2xl border border-brand/25 bg-gradient-to-br from-[#0d2a4a] to-surface p-4">
+            <p className="text-[10px] uppercase tracking-wide text-white/50">Paytm Balance</p>
+            <p className="mt-1 text-[28px] font-semibold leading-none text-white">
+              {formatINR(person.balance)}
+            </p>
+            <p className="mt-2 text-[10px] text-white/50">{person.upiId}</p>
+          </div>
+
+          <div className="rounded-2xl border border-line bg-surface p-3.5">
+            <p className="text-[10px] uppercase tracking-wide text-faint">Linked bank</p>
+            <p className="mt-1 text-[13px] font-medium text-body">
+              {person.bankName} &bull;&bull;{person.bankLast4}
+            </p>
+            <p className="mt-1 text-[10px] leading-relaxed text-muted">
+              UPI payments draw on this account, not on your Paytm Balance — which is why a large
+              UPI payment succeeds where the wallet would fall short.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setBalanceOpen(false);
+              go('history');
+            }}
+            className="w-full rounded-2xl border border-line bg-elevated py-3 text-[13px] font-medium text-body transition active:scale-[0.98]"
+          >
+            View payment history
+          </button>
+        </div>
+      </Sheet>
 
       <BottomNav active="home" />
     </div>

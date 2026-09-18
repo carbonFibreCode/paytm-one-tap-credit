@@ -9,12 +9,12 @@
  * payment screen.
  */
 
-import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import type { Decision, ScoreFactor, SignalComponent } from '@/lib/types';
 import { useApp } from '@/lib/client/state';
 import { humaniseGate } from '@/lib/format';
 import { DecisionTrace } from './DecisionTrace';
+import { Sheet } from './Sheet';
 import { Pill } from './Chrome';
 
 /** The component furthest from full marks — the reason a score is held back. */
@@ -36,90 +36,75 @@ export function DecisionSheet() {
   const { traceOpen, toggleTrace, decision, clearHistory } = useApp();
 
   return (
-    <AnimatePresence>
-      {traceOpen && decision ? (
-        <>
-          <motion.button
-            type="button"
-            aria-label="Close decision details"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => toggleTrace(false)}
-            className="absolute inset-0 z-40 bg-black/70"
-          />
-
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 280, damping: 30 }}
-            className="absolute inset-x-0 bottom-0 z-50 flex max-h-[92%] flex-col rounded-t-3xl border-t border-line bg-surface"
-          >
-            {/* Header stays fixed so the close control is always reachable. */}
-            <div className="flex shrink-0 items-start gap-3 border-b border-line px-5 pb-3 pt-4">
-              <div className="min-w-0 flex-1">
-                <span className="flex items-center gap-2">
-                  <Pill tone={decision.showNudge ? 'good' : 'bad'}>
-                    {decision.showNudge ? 'Offer shown' : 'No nudge'}
-                  </Pill>
-                  <span className="truncate text-[12px] font-semibold text-body">
-                    {decision.showNudge
-                      ? 'All checks passed'
-                      : humaniseGate(decision.blockedBy ?? 'SCORE_THRESHOLD')}
-                  </span>
+    <Sheet
+      open={traceOpen && Boolean(decision)}
+      onClose={() => toggleTrace(false)}
+      label="Decision details"
+      maxHeightClass="max-h-[92%]"
+      header={
+        decision ? (
+          <div className="flex items-start gap-3 border-b border-line px-5 pb-3 pt-1">
+            <div className="min-w-0 flex-1">
+              <span className="flex items-center gap-2">
+                <Pill tone={decision.showNudge ? 'good' : 'bad'}>
+                  {decision.showNudge ? 'Offer shown' : 'No nudge'}
+                </Pill>
+                <span className="truncate text-[12px] font-semibold text-body">
+                  {decision.showNudge
+                    ? 'All checks passed'
+                    : humaniseGate(decision.blockedBy ?? 'SCORE_THRESHOLD')}
                 </span>
-              </div>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggleTrace(false)}
+              aria-label="Close decision details"
+              className="-mr-1 shrink-0 rounded-lg p-1.5 text-muted transition hover:bg-elevated hover:text-body"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        ) : null
+      }
+    >
+      {decision ? (
+        <div className="scroll-slim flex-1 space-y-4 overflow-y-auto px-5 pb-6 pt-4">
+          <p className="text-[12px] leading-relaxed text-body">
+            {decision.blockedReason ?? decision.trace.summary}
+          </p>
+
+          <div className="flex gap-2">
+            <Stat label="Relevance" value={decision.score} />
+            <Stat label="Eligibility signal" value={decision.eligibilitySignal} />
+          </div>
+
+          {decision.showNudge ? null : <Shortfall decision={decision} />}
+
+          {decision.blockedBy === 'FREQUENCY_CAP' ? (
+            <div className="flex items-center gap-2 rounded-xl border border-line bg-elevated p-2.5">
+              <span className="min-w-0 flex-1 text-[10px] leading-snug text-muted">
+                You declined an offer recently, so we are staying quiet for seven days.
+              </span>
               <button
                 type="button"
-                onClick={() => toggleTrace(false)}
-                aria-label="Close decision details"
-                className="-mr-1 -mt-1 shrink-0 rounded-lg p-1.5 text-muted transition hover:bg-elevated hover:text-body"
+                onClick={clearHistory}
+                className="shrink-0 rounded-lg border border-brand/40 bg-brand/10 px-2.5 py-1 text-[10px] font-medium text-brand transition active:scale-95"
               >
-                <X size={16} />
+                Reset
               </button>
             </div>
+          ) : null}
 
-            <div className="scroll-slim flex-1 space-y-4 overflow-y-auto px-5 pb-6 pt-4">
-              {/* Why, in one sentence. */}
-              <p className="text-[12px] leading-relaxed text-body">
-                {decision.blockedReason ?? decision.trace.summary}
-              </p>
-
-              <div className="flex gap-2">
-                <Stat label="Relevance" value={decision.score} />
-                <Stat label="Eligibility signal" value={decision.eligibilitySignal} />
-              </div>
-
-              {/* The single requirement furthest from being met. */}
-              {decision.showNudge ? null : <Shortfall decision={decision} />}
-
-              {decision.blockedBy === 'FREQUENCY_CAP' ? (
-                <div className="flex items-center gap-2 rounded-xl border border-line bg-elevated p-2.5">
-                  <span className="min-w-0 flex-1 text-[10px] leading-snug text-muted">
-                    You declined an offer recently, so we are staying quiet for seven days.
-                  </span>
-                  <button
-                    type="button"
-                    onClick={clearHistory}
-                    className="shrink-0 rounded-lg border border-brand/40 bg-brand/10 px-2.5 py-1 text-[10px] font-medium text-brand transition active:scale-95"
-                  >
-                    Reset
-                  </button>
-                </div>
-              ) : null}
-
-              <div className="border-t border-line pt-4">
-                <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-faint">
-                  Full decision trail
-                </h3>
-                <DecisionTrace decision={decision} />
-              </div>
-            </div>
-          </motion.div>
-        </>
+          <div className="border-t border-line pt-4">
+            <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-faint">
+              Full decision trail
+            </h3>
+            <DecisionTrace decision={decision} />
+          </div>
+        </div>
       ) : null}
-    </AnimatePresence>
+    </Sheet>
   );
 }
 

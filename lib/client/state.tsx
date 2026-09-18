@@ -36,15 +36,29 @@ import {
 // Bumping this version drops any history stored under the previous key, which
 // is how we clear stale demo state left over from an earlier session.
 const HISTORY_KEY = 'otc.nudge-history.v2';
+const PAYMENTS_KEY = 'otc.payments.v1';
 
-export type Screen = 'persona' | 'home' | 'scanner' | 'checkout' | 'approved' | 'success';
+/** Settle time after the last keypress before the engine is asked. */
+const DECISION_DEBOUNCE_MS = 320;
+
+export type Screen =
+  | 'persona'
+  | 'home'
+  | 'scanner'
+  | 'history'
+  | 'checkout'
+  | 'approved'
+  | 'success';
 
 export interface PaymentRecord {
   amount: number;
   merchantName: string;
+  merchantId?: string;
   method: 'upi' | 'wallet' | 'postpaid' | 'card';
   partner?: string;
   tenure?: EmiOption;
+  /** ISO timestamp. Set when the payment is made, so history can be ordered. */
+  at?: string;
 }
 
 export interface DecisionMeta {
@@ -86,6 +100,8 @@ interface State {
   traceOpen: boolean;
   historyByUser: Record<string, NudgeHistoryEntry[]>;
   historyLoaded: boolean;
+  /** Completed payments, newest last, per user. */
+  paymentsByUser: Record<string, PaymentRecord[]>;
 }
 
 type Action =
@@ -106,7 +122,11 @@ type Action =
   | { type: 'toggleDrawer'; open?: boolean }
   | { type: 'toggleInfo'; open?: boolean }
   | { type: 'toggleTrace'; open?: boolean }
-  | { type: 'historyLoaded'; history: Record<string, NudgeHistoryEntry[]> }
+  | {
+      type: 'historyLoaded';
+      history: Record<string, NudgeHistoryEntry[]>;
+      payments: Record<string, PaymentRecord[]>;
+    }
   | { type: 'recordOutcome'; userId: string; entry: NudgeHistoryEntry }
   | { type: 'clearHistory'; userId: string };
 
@@ -133,6 +153,7 @@ const initialState: State = {
   traceOpen: false,
   historyByUser: {},
   historyLoaded: false,
+  paymentsByUser: {},
 };
 
 /** Any change to the transaction invalidates the decision that described it. */
@@ -202,8 +223,18 @@ function reducer(state: State, action: Action): State {
     case 'dismissNudge':
       return { ...state, nudgeDismissed: true };
 
-    case 'pay':
-      return { ...state, payment: action.payment, screen: 'success', drawerOpen: false };
+    case 'pay': {
+      // Every completed payment lands in history — that is what makes the
+      // History tab a record of this session rather than a static mock.
+      const mine = state.paymentsByUser[state.userId] ?? [];
+      return {
+        ...state,
+        payment: action.payment,
+        paymentsByUser: { ...state.paymentsByUser, [state.userId]: [...mine, action.payment] },
+        screen: 'success',
+        drawerOpen: false,
+      };
+    }
 
     case 'setMode':
       return { ...clearDecision(state), mode: action.mode };
@@ -221,7 +252,12 @@ function reducer(state: State, action: Action): State {
       return { ...state, traceOpen: action.open ?? !state.traceOpen };
 
     case 'historyLoaded':
-      return { ...state, historyByUser: action.history, historyLoaded: true };
+      return {
+        ...state,
+        historyByUser: action.history,
+        paymentsByUser: action.payments,
+        historyLoaded: true,
+      };
 
     case 'recordOutcome': {
       const existing = state.historyByUser[action.userId] ?? [];
@@ -245,6 +281,7 @@ function reducer(state: State, action: Action): State {
 interface Store extends State {
   merchant: ReturnType<typeof getMerchant>;
   history: NudgeHistoryEntry[];
+  payments: PaymentRecord[];
   n8nAvailable: boolean;
   go: (screen: Screen) => void;
   selectMerchant: (merchantId: string) => void;
@@ -274,10 +311,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(HISTORY_KEY);
-      dispatch({ type: 'historyLoaded', history: raw ? JSON.parse(raw) : {} });
+      const paid = window.localStorage.getItem(PAYMENTS_KEY);
+      dispatch({
+        type: 'historyLoaded',
+        history: raw ? JSON.parse(raw) : {},
+        payments: paid ? JSON.parse(paid) : {},
+      });
     } catch {
       // A corrupt or unavailable store must not stop the demo.
-      dispatch({ type: 'historyLoaded', history: {} });
+      dispatch({ type: 'historyLoaded', history: {}, payments: {} });
     }
   }, []);
 
@@ -285,10 +327,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     if (!state.historyLoaded) return;
     try {
       window.localStorage.setItem(HISTORY_KEY, JSON.stringify(state.historyByUser));
+      window.localStorage.setItem(PAYMENTS_KEY, JSON.stringify(state.paymentsByUser));
     } catch {
       // Private browsing, quota, etc. — losing history is survivable.
     }
-  }, [state.historyByUser, state.historyLoaded]);
+  }, [state.historyByUser, state.paymentsByUser, state.historyLoaded]);
 
   const history = useMemo(
     () => state.historyByUser[state.userId] ?? [],
@@ -307,6 +350,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     dispatch({ type: 'decisionStart' });
+
+    // Typing an amount fires a keypress per digit. Without this, "50000" would
+    // launch five decisions and the UI would flicker through four wrong answers
+    // on the way to the right one.
+    const debounce = setTimeout(() => {
+      if (cancelled) return;
+      runDecision();
+    }, DECISION_DEBOUNCE_MS);
+
+    function runDecision() {
     requestDecision({ userId, merchantId, amount, selectedInstrument: instrument, nudgeHistory: history }, mode)
       .then((outcome) => {
         if (cancelled) return;
@@ -335,9 +388,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           error: error instanceof Error ? error.message : String(error),
         });
       });
+    }
 
     return () => {
       cancelled = true;
+      clearTimeout(debounce);
     };
     // `history` is intentionally excluded: recording an outcome should not
     // re-run the decision that produced it mid-animation.
@@ -434,6 +489,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       ...state,
       merchant,
       history,
+      payments: [...(state.paymentsByUser[state.userId] ?? [])].reverse(),
       n8nAvailable: n8nConfigured(),
 
       go: (next) => dispatch({ type: 'go', screen: next }),
@@ -465,7 +521,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           payment: {
             amount: state.amount,
             merchantName: merchant?.name ?? 'Merchant',
+            merchantId: state.merchantId,
             method: state.instrument === 'wallet' ? 'wallet' : 'upi',
+            at: new Date().toISOString(),
           },
         });
       },
@@ -476,9 +534,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           payment: {
             amount: state.amount,
             merchantName: merchant?.name ?? 'Merchant',
+            merchantId: state.merchantId,
             method: offer?.product ?? 'postpaid',
             partner: offer?.partner,
             tenure,
+            at: new Date().toISOString(),
           },
         });
       },

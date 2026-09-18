@@ -3,7 +3,6 @@
 import { motion } from 'framer-motion';
 import { useApp } from '@/lib/client/state';
 import { formatINR, formatShortDate } from '@/lib/format';
-import { StatusBar } from '../Chrome';
 import { buildSchedule } from './ApprovedScreen';
 
 export function SuccessScreen() {
@@ -14,7 +13,6 @@ export function SuccessScreen() {
 
   return (
     <div className="flex h-full flex-col">
-      <StatusBar />
 
       <div className="scroll-slim flex-1 overflow-y-auto px-5 pb-4 pt-6">
         <div className="flex flex-col items-center text-center">

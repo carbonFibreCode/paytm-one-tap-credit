@@ -6,7 +6,7 @@ import type { EmiOption } from '@/lib/types';
 import { useApp } from '@/lib/client/state';
 import { formatINR, formatShortDate } from '@/lib/format';
 import { addMonths } from '@/lib/dates';
-import { AppBar, Pill, StatusBar } from '../Chrome';
+import { AppBar, Pill } from '../Chrome';
 
 export function ApprovedScreen() {
   const { decision, amount, merchant, confirmCredit, go } = useApp();
@@ -23,7 +23,6 @@ export function ApprovedScreen() {
 
   return (
     <div className="flex h-full flex-col">
-      <StatusBar />
       <AppBar title="Set up in one tap" onBack={() => go('checkout')} />
 
       <div className="scroll-slim flex-1 overflow-y-auto px-5 pb-4">

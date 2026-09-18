@@ -13,14 +13,12 @@ import { ChevronRight } from 'lucide-react';
 import { PEOPLE } from '@/lib/people';
 import { useApp } from '@/lib/client/state';
 import { formatINR } from '@/lib/format';
-import { StatusBar } from '../Chrome';
 
 export function PersonaScreen() {
   const { setUser, userId } = useApp();
 
   return (
     <div className="flex h-full flex-col bg-gradient-to-b from-brand-deep via-ink to-ink">
-      <StatusBar />
 
       <div className="px-6 pb-5 pt-8">
         <PaytmWordmark />
