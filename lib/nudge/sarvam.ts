@@ -14,7 +14,8 @@
  */
 
 import type { Language } from '../types';
-import { formatRupees, renderTemplate, type NudgeContext } from './templates';
+import { formatINR } from '../format';
+import { renderTemplate, type NudgeContext } from './templates';
 
 const TIMEOUT_MS = 2_500;
 const MAX_LENGTH = 160;
@@ -157,9 +158,9 @@ function buildPrompt(context: NudgeContext): { system: string; user: string } {
   const user = [
     `Language: ${LANGUAGE_INSTRUCTION[context.language]}`,
     `Merchant: ${context.merchantName} (${context.merchantCategory})`,
-    `Transaction amount: ${formatRupees(context.amount)}`,
+    `Transaction amount: ${formatINR(context.amount)}`,
     `Credit product: ${context.partner}`,
-    `Monthly instalment: ${formatRupees(context.emi)} for ${context.months} months`,
+    `Monthly instalment: ${formatINR(context.emi)} for ${context.months} months`,
     costLine,
     '',
     `Write the one-line prompt in ${LANGUAGE_INSTRUCTION[context.language]}.`,

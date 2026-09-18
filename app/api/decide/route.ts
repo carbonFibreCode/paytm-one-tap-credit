@@ -11,8 +11,7 @@ import { decide } from '@/lib/engine/decide';
 import { buildProfile, getPersona } from '@/lib/personas';
 import { parseDecideRequest } from '@/lib/api/validate';
 import { liveCreditOrEmpty } from '@/lib/credit/store';
-
-export const ENGINE_VERSION = 'rules-v1';
+import { ENGINE_VERSION } from '@/lib/engine/version';
 
 export async function POST(request: Request) {
   const now = new Date().toISOString();

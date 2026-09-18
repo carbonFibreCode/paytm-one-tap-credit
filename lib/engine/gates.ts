@@ -19,6 +19,8 @@ import type {
   ProductState,
   UserProfile,
 } from '../types';
+import { CATEGORY_META } from '../domain';
+import { formatINR } from '../format';
 import { daysBetween } from '../dates';
 
 // --- thresholds ------------------------------------------------------------
@@ -38,40 +40,6 @@ export const FREQUENCY_WINDOW_DAYS = 7;
 export const BANK_COOLOFF_DAYS = 30;
 /** A category must clear this to be worth interrupting for. */
 export const RELEVANCE_FLOOR = 0.3;
-
-/**
- * How relevant a credit offer is per category. Also feeds the relevance score —
- * the gate uses the floor, the score uses the value.
- */
-export const CATEGORY_RELEVANCE: Record<MerchantCategory, number> = {
-  electronics: 0.9,
-  travel: 0.85,
-  jewellery: 0.8,
-  healthcare: 0.6,
-  apparel: 0.45,
-  grocery: 0.15,
-  fuel: 0.1,
-  bills: 0.15,
-  // Prohibited outright — the values exist only for completeness.
-  p2p: 0,
-  wallet_load: 0,
-  gambling: 0,
-  crypto: 0,
-};
-
-/**
- * Categories that never receive a credit nudge at any amount, for any user.
- *
- * Person-to-person transfers and wallet top-ups are the important ones: pushing
- * borrowed money into them turns a credit line into untraceable cash, which is
- * exactly what lending rules exist to prevent.
- */
-export const PROHIBITED_CATEGORIES: MerchantCategory[] = [
-  'p2p',
-  'wallet_load',
-  'gambling',
-  'crypto',
-];
 
 // --- context ---------------------------------------------------------------
 
@@ -97,22 +65,18 @@ interface Gate {
   evaluate: (context: GateContext) => { passed: boolean; detail: string };
 }
 
-function rupees(value: number): string {
-  return `₹${Math.round(value).toLocaleString('en-IN')}`;
-}
-
 // --- the gates -------------------------------------------------------------
 
 const GATES: Gate[] = [
   {
     id: 'CATEGORY_PROHIBITED',
     evaluate: ({ category }) => {
-      const prohibited = PROHIBITED_CATEGORIES.includes(category);
+      const prohibited = CATEGORY_META[category].prohibited;
       return {
         passed: !prohibited,
         detail: prohibited
-          ? `${label(category)} can never carry a credit offer — borrowed funds must not be routed into transfers or cash-equivalents`
-          : `${label(category)} is not a prohibited category`,
+          ? `${CATEGORY_META[category].label} can never carry a credit offer — borrowed funds must not be routed into transfers or cash-equivalents`
+          : `${CATEGORY_META[category].label} is not a prohibited category`,
       };
     },
   },
@@ -131,8 +95,8 @@ const GATES: Gate[] = [
       passed: amount >= AMOUNT_FLOOR,
       detail:
         amount >= AMOUNT_FLOOR
-          ? `${rupees(amount)} is at or above the ${rupees(AMOUNT_FLOOR)} floor`
-          : `${rupees(amount)} is below the ${rupees(AMOUNT_FLOOR)} floor — too small to be worth an instalment plan`,
+          ? `${formatINR(amount)} is at or above the ${formatINR(AMOUNT_FLOOR)} floor`
+          : `${formatINR(amount)} is below the ${formatINR(AMOUNT_FLOOR)} floor — too small to be worth an instalment plan`,
     }),
   },
   {
@@ -141,20 +105,20 @@ const GATES: Gate[] = [
       passed: amount <= AMOUNT_CEILING,
       detail:
         amount <= AMOUNT_CEILING
-          ? `${rupees(amount)} is within the ${rupees(AMOUNT_CEILING)} ceiling`
-          : `${rupees(amount)} exceeds the ${rupees(AMOUNT_CEILING)} ceiling — no distributed product can fund it`,
+          ? `${formatINR(amount)} is within the ${formatINR(AMOUNT_CEILING)} ceiling`
+          : `${formatINR(amount)} exceeds the ${formatINR(AMOUNT_CEILING)} ceiling — no distributed product can fund it`,
     }),
   },
   {
     id: 'CATEGORY_RELEVANCE',
     evaluate: ({ category }) => {
-      const relevance = CATEGORY_RELEVANCE[category];
+      const relevance = CATEGORY_META[category].relevance;
       return {
         passed: relevance >= RELEVANCE_FLOOR,
         detail:
           relevance >= RELEVANCE_FLOOR
-            ? `${label(category)} scores ${relevance.toFixed(2)} on credit relevance`
-            : `${label(category)} scores ${relevance.toFixed(2)} — an everyday purchase, where a credit prompt is an interruption rather than a help`,
+            ? `${CATEGORY_META[category].label} scores ${relevance.toFixed(2)} on credit relevance`
+            : `${CATEGORY_META[category].label} scores ${relevance.toFixed(2)} — an everyday purchase, where a credit prompt is an interruption rather than a help`,
       };
     },
   },
@@ -274,7 +238,7 @@ const GATES: Gate[] = [
           passed: true,
           detail: `${fundingProducts.length} product${
             fundingProducts.length === 1 ? '' : 's'
-          } can cover ${rupees(amount)} in full`,
+          } can cover ${formatINR(amount)} in full`,
         };
       }
       const best = eligibleProducts.reduce(
@@ -283,7 +247,7 @@ const GATES: Gate[] = [
       );
       return {
         passed: false,
-        detail: `Highest available limit is ${rupees(best)}, short of ${rupees(
+        detail: `Highest available limit is ${formatINR(best)}, short of ${formatINR(
           amount,
         )} — a partial offer would leave the payment stranded`,
       };
@@ -297,36 +261,18 @@ const GATES: Gate[] = [
       return {
         passed,
         detail: passed
-          ? `Lowest instalment ${rupees(minAchievableEmi)}/month fits within ${rupees(
+          ? `Lowest instalment ${formatINR(minAchievableEmi)}/month fits within ${formatINR(
               capacity,
             )}/month of assessed capacity`
-          : `Even the longest plan for ${rupees(amount)} costs ${rupees(
+          : `Even the longest plan for ${formatINR(amount)} costs ${formatINR(
               minAchievableEmi,
-            )}/month, above the ${rupees(capacity)}/month this user can carry after ${rupees(
+            )}/month, above the ${formatINR(capacity)}/month this user can carry after ${formatINR(
               profile.features.fixedMonthlyOutflow,
             )}/month of existing commitments`,
       };
     },
   },
 ];
-
-function label(category: MerchantCategory): string {
-  const names: Record<MerchantCategory, string> = {
-    electronics: 'Electronics',
-    travel: 'Travel',
-    jewellery: 'Jewellery',
-    apparel: 'Apparel',
-    healthcare: 'Healthcare',
-    grocery: 'Groceries',
-    fuel: 'Fuel',
-    bills: 'Bill payments',
-    p2p: 'Person-to-person transfers',
-    wallet_load: 'Wallet top-ups',
-    gambling: 'Gaming and betting',
-    crypto: 'Crypto purchases',
-  };
-  return names[category];
-}
 
 /**
  * Run every gate in order, stopping at the first failure.

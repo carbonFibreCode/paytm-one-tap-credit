@@ -6,7 +6,7 @@
  * deterministic function of it — so there is nothing to keep in sync.
  */
 
-import QRCode from 'qrcode';
+import { renderQrSvg } from '@/lib/qr';
 import { findIntent } from '@/lib/intents/store';
 
 type Context = { params: Promise<{ ref: string }> };
@@ -16,12 +16,7 @@ export async function GET(_request: Request, { params }: Context) {
   const intent = await findIntent(ref).catch(() => null);
   if (!intent) return new Response('Unknown intent', { status: 404 });
 
-  const svg = await QRCode.toString(intent.payload, {
-    type: 'svg',
-    margin: 1,
-    errorCorrectionLevel: 'M',
-    color: { dark: '#05070f', light: '#ffffff' },
-  });
+  const svg = await renderQrSvg(intent.payload);
   return new Response(svg, {
     headers: {
       'Content-Type': 'image/svg+xml',

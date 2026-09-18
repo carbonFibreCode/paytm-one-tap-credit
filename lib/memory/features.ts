@@ -13,6 +13,8 @@ import type {
   MerchantCategory,
   RecurringObligation,
 } from '../types';
+import { DISCRETIONARY_CATEGORIES } from '../domain';
+import { clamp } from '../math';
 import { dayOfMonth, daysBetween, monthKey } from '../dates';
 
 /** Repayment record lives with the lender, not in the payment ledger. */
@@ -20,15 +22,6 @@ export interface CreditRecord {
   priorRepayments: number;
   latePayments: number;
 }
-
-/** Discretionary categories — the ones a credit nudge could plausibly apply to. */
-const DISCRETIONARY: MerchantCategory[] = [
-  'electronics',
-  'travel',
-  'jewellery',
-  'apparel',
-  'healthcare',
-];
 
 /** A charge must repeat across at least this many months to count as recurring. */
 const RECURRENCE_THRESHOLD = 3;
@@ -50,10 +43,6 @@ function stdDev(values: number[]): number {
   if (values.length < 2) return 0;
   const average = mean(values);
   return Math.sqrt(mean(values.map((value) => (value - average) ** 2)));
-}
-
-function clamp(value: number, low = 0, high = 1): number {
-  return Math.min(high, Math.max(low, value));
 }
 
 /**
@@ -176,12 +165,12 @@ export function computeFeatures(
 
   // Category affinity across discretionary spend only.
   const discretionaryDebits = debits.filter((entry) =>
-    DISCRETIONARY.includes(entry.category as MerchantCategory),
+    DISCRETIONARY_CATEGORIES.includes(entry.category as MerchantCategory),
   );
   const discretionaryTotal = sum(discretionaryDebits.map((entry) => entry.amount));
   const categoryAffinity: Partial<Record<MerchantCategory, number>> = {};
   if (discretionaryTotal > 0) {
-    for (const category of DISCRETIONARY) {
+    for (const category of DISCRETIONARY_CATEGORIES) {
       const categoryTotal = sum(
         discretionaryDebits.filter((entry) => entry.category === category).map((e) => e.amount),
       );

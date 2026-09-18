@@ -5,38 +5,21 @@
  * its inputs, so a decision can always be reproduced from the request alone.
  */
 
-/** Merchant categories we can see at checkout. */
-export type MerchantCategory =
-  // discretionary — credit is relevant here
-  | 'electronics'
-  | 'travel'
-  | 'jewellery'
-  | 'apparel'
-  | 'healthcare'
-  // essential / recurring — low relevance, high annoyance
-  | 'grocery'
-  | 'fuel'
-  | 'bills'
-  // never eligible for a credit nudge, at any amount
-  | 'p2p'
-  | 'wallet_load'
-  | 'gambling'
-  | 'crypto';
+// The vocabulary itself lives in `lib/domain.ts` as `as const` arrays, so these
+// unions and the Zod validators in `lib/schemas.ts` are derived from one list.
+export type {
+  Instrument,
+  Language,
+  MerchantCategory,
+  NudgeOutcome,
+  PaymentMethod,
+  ProductId,
+} from './domain';
+
+import type { Instrument, Language, MerchantCategory, NudgeOutcome, ProductId } from './domain';
 
 /** Categories that only ever appear in a user's history, never at checkout. */
 export type LedgerCategory = MerchantCategory | 'salary' | 'rent' | 'emi';
-
-export type ProductId = 'postpaid' | 'card';
-
-export type Language = 'hi' | 'en' | 'ta' | 'bn';
-
-export type Instrument =
-  | 'upi'
-  | 'wallet'
-  | 'debit_card'
-  | 'credit_card'
-  | 'postpaid'
-  | 'netbanking';
 
 // ---------------------------------------------------------------------------
 // Memory layer — the "warm information" the pitch is built on
@@ -164,8 +147,6 @@ export interface UserProfile {
 // ---------------------------------------------------------------------------
 // Decision contract
 // ---------------------------------------------------------------------------
-
-export type NudgeOutcome = 'shown' | 'accepted' | 'declined';
 
 export interface NudgeHistoryEntry {
   product: ProductId;

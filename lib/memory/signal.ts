@@ -11,15 +11,8 @@
  */
 
 import type { BehaviouralFeatures, SignalComponent } from '../types';
-
-function clamp(value: number, low = 0, high = 1): number {
-  return Math.min(high, Math.max(low, value));
-}
-
-function rupees(value: number): string {
-  return `₹${value.toLocaleString('en-IN')}`;
-}
-
+import { formatINR } from '../format';
+import { clamp, round } from '../math';
 export interface EligibilitySignal {
   score: number;
   breakdown: SignalComponent[];
@@ -39,7 +32,7 @@ export function deriveEligibilitySignal(features: BehaviouralFeatures): Eligibil
     max: incomeMax,
     detail:
       features.avgMonthlyInflow > 0
-        ? `Salary credit of ${rupees(features.avgMonthlyInflow)}/month detected, arriving on a ${
+        ? `Salary credit of ${formatINR(features.avgMonthlyInflow)}/month detected, arriving on a ${
             features.inflowRegularity > 0.7 ? 'predictable' : 'variable'
           } date`
         : 'No recurring salary credit detected in the history',
@@ -74,7 +67,7 @@ export function deriveEligibilitySignal(features: BehaviouralFeatures): Eligibil
     max: headroomMax,
     detail:
       features.avgMonthlyInflow > 0
-        ? `${rupees(features.fixedMonthlyOutflow)}/month already committed (${Math.round(
+        ? `${formatINR(features.fixedMonthlyOutflow)}/month already committed (${Math.round(
             commitmentRatio * 100,
           )}% of income) across ${features.detectedObligations.length} recurring obligations`
         : 'Cannot assess — no income signal to compare obligations against',
@@ -92,7 +85,7 @@ export function deriveEligibilitySignal(features: BehaviouralFeatures): Eligibil
     points: round(consistencyValue * consistencyMax),
     max: consistencyMax,
     detail: assessable
-      ? `Monthly spend averages ${rupees(features.avgMonthlySpend)} with ${Math.round(
+      ? `Monthly spend averages ${formatINR(features.avgMonthlySpend)} with ${Math.round(
           features.spendVolatility * 100,
         )}% month-to-month variation`
       : `Only ${features.monthsObserved} month${
@@ -115,8 +108,4 @@ export function deriveEligibilitySignal(features: BehaviouralFeatures): Eligibil
 
   const score = Math.round(breakdown.reduce((total, component) => total + component.points, 0));
   return { score, breakdown };
-}
-
-function round(value: number): number {
-  return Math.round(value * 10) / 10;
 }

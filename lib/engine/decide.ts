@@ -16,28 +16,27 @@
 import type {
   Decision,
   DecisionRequest,
-  DecisionTrace,
   EmiOption,
   GateId,
   GateResult,
-  ProductState,
   UserProfile,
 } from '../types';
-import { runGates, type GateContext, AMOUNT_FLOOR, ELIGIBILITY_THRESHOLD } from './gates';
+import { runGates, type GateContext } from './gates';
 import { NUDGE_SCORE_THRESHOLD, scoreTransaction } from './score';
-import { CARD_PREFERENCE_THRESHOLD } from './product';
 import { buildTenures, lowestInstalment } from './emi';
 import { buildOffer, DECLINE } from './offer';
+import {
+  counterfactualForBlock,
+  counterfactualForNudge,
+  summarise,
+  weakestFactorHint,
+} from './explain';
 
 export interface DecideInput {
   request: DecisionRequest;
   profile: UserProfile;
   /** Whether the merchant is in the credit-accepting network. */
   merchantCreditEnabled: boolean;
-}
-
-function rupees(value: number): string {
-  return `₹${Math.round(value).toLocaleString('en-IN')}`;
 }
 
 /**
@@ -176,120 +175,6 @@ export function decide(input: DecideInput): Decision {
       summary: summarise(product, amount, offer.tenures, score),
     },
   };
-}
-
-// ---------------------------------------------------------------------------
-// Explanations
-// ---------------------------------------------------------------------------
-
-function summarise(
-  product: ProductState,
-  amount: number,
-  tenures: EmiOption[],
-  score: number,
-): string {
-  // Lead with a no-cost plan when one exists — it is the most compelling option
-  // and the one a user actually compares against paying in full. Otherwise fall
-  // back to the smallest instalment.
-  const best =
-    tenures.find((option) => option.noCost) ??
-    tenures.reduce((lowest, option) => (option.emi < lowest.emi ? option : lowest));
-  return `${rupees(amount)} scored ${score}/100 for instalment credit. ${
-    product.partner
-  } can cover it in ${best.months} instalments of ${rupees(best.emi)}${
-    best.noCost ? ' at no extra cost' : ''
-  }.`;
-}
-
-/** What would have had to be different for this nudge *not* to appear. */
-function counterfactualForNudge(context: GateContext, score: number): string {
-  const headroom = score - NUDGE_SCORE_THRESHOLD;
-  const parts: string[] = [];
-
-  parts.push(
-    `Below ${rupees(AMOUNT_FLOOR)}, or in an everyday category like groceries or fuel, this would not have been shown.`,
-  );
-
-  if (context.profile.eligibilitySignal < ELIGIBILITY_THRESHOLD + 15) {
-    parts.push(
-      `The eligibility signal of ${context.profile.eligibilitySignal} is close to the cut-off of ${ELIGIBILITY_THRESHOLD}.`,
-    );
-  }
-  if (headroom < 10) {
-    parts.push(`The score cleared the bar by only ${headroom} points.`);
-  }
-  if (context.fundingProducts.length > 1) {
-    parts.push(
-      `Crossing ${rupees(CARD_PREFERENCE_THRESHOLD)} switches the recommendation between Postpaid and the card.`,
-    );
-  }
-  return parts.join(' ');
-}
-
-/** What would have to change for a blocked decision to become an offer. */
-function counterfactualForBlock(gate: GateId, context: GateContext): string {
-  const { amount, profile } = context;
-
-  switch (gate) {
-    case 'CATEGORY_PROHIBITED':
-      return 'No amount and no eligibility signal would change this — the category is blocked outright.';
-    case 'MERCHANT_NOT_ENABLED':
-      return 'The same purchase at a merchant inside the credit network would be assessed normally.';
-    case 'AMOUNT_FLOOR':
-      return `At ${rupees(AMOUNT_FLOOR)} or above, this transaction would be assessed instead of skipped.`;
-    case 'AMOUNT_CEILING':
-      return `At ${rupees(2_00_000)} or below, this would be assessed against the user's available limits.`;
-    case 'CATEGORY_RELEVANCE':
-      return 'The same amount spent on electronics, travel or jewellery would clear the relevance floor.';
-    case 'OPTED_OUT':
-      return 'Only the user reversing their opt-out would change this.';
-    case 'COLD_START':
-      return `At 90 days and 25 transactions of history the signal becomes meaningful; this user is at ${profile.features.accountAgeDays} days and ${profile.features.txnCount}.`;
-    case 'NOT_ELIGIBLE':
-      return `The signal would need to reach ${ELIGIBILITY_THRESHOLD}; it currently sits at ${profile.eligibilitySignal}, held back most by ${weakestComponent(profile)}.`;
-    case 'BANK_COOLOFF':
-      return 'Once the 30-day cooling-off elapses, this user is assessed normally again.';
-    case 'FREQUENCY_CAP':
-      return 'Once the 7-day window elapses, this user becomes eligible to be asked again.';
-    case 'NO_PRODUCT':
-      return 'This user is not pre-approved for any product — approval is the partner bank’s decision, not ours.';
-    case 'ALREADY_ACTIVE':
-      return 'Selecting a different payment method would make the offer relevant again.';
-    case 'INSUFFICIENT_LIMIT': {
-      const best = context.eligibleProducts.reduce(
-        (highest, product) => Math.max(highest, product.available),
-        0,
-      );
-      return `At ${rupees(best)} or below, the existing limit would cover this purchase in full.`;
-    }
-    case 'AFFORDABILITY': {
-      // An instalment is directly proportional to the principal at a fixed rate
-      // and tenure, so the affordable principal scales the same way.
-      const affordablePrincipal =
-        (amount * profile.features.affordabilityCapacity) / context.minAchievableEmi;
-      return `The same purchase at roughly ${rupees(
-        affordablePrincipal,
-      )} or less would fit within this user's assessed capacity, using the longest plan available to them.`;
-    }
-    default:
-      return `Amount ${rupees(amount)} in ${context.category}.`;
-  }
-}
-
-function weakestComponent(profile: UserProfile): string {
-  const weakest = profile.eligibilityBreakdown.reduce((lowest, component) =>
-    component.points / component.max < lowest.points / lowest.max ? component : lowest,
-  );
-  return `${weakest.label.toLowerCase()} (${weakest.points}/${weakest.max})`;
-}
-
-function weakestFactorHint(factors: DecisionTrace['factors']): string {
-  const weakest = factors.reduce((lowest, factor) =>
-    factor.points / factor.weight < lowest.points / lowest.weight ? factor : lowest,
-  );
-  return `The score was held back most by ${weakest.label.toLowerCase()} (${weakest.points}/${
-    weakest.weight
-  }). ${weakest.detail}.`;
 }
 
 /** Re-export so callers can surface the same gate results the engine used. */

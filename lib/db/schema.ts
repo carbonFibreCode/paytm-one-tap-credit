@@ -32,6 +32,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
+import { isoDate, isoTimestamp } from '../schemas';
 import type { DecisionTrace } from '../types';
 
 export const servedByEnum = pgEnum('served_by', ['n8n', 'direct']);
@@ -221,10 +222,6 @@ export const emiInstallmentsRelations = relations(emiInstallments, ({ one }) => 
 
 // Overrides use the callback form throughout: a bare schema would replace the
 // column's own nullability, silently turning an optional column into a required one.
-const isoTimestamp = z.string().refine((value) => !Number.isNaN(Date.parse(value)), {
-  message: 'must be an ISO timestamp',
-});
-
 export const insertDecisionSchema = createInsertSchema(decisions, {
   decisionKey: (schema) => schema.min(1),
   userId: (schema) => schema.min(1),
@@ -240,8 +237,6 @@ export const insertNudgeEventSchema = createInsertSchema(nudgeEvents, {
   userId: (schema) => schema.min(1),
   occurredAt: () => isoTimestamp,
 });
-
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'must be a YYYY-MM-DD date');
 
 export const insertPaymentSchema = createInsertSchema(payments, {
   userId: (schema) => schema.min(1),

@@ -9,7 +9,7 @@ import { PERSONAS } from '@/lib/personas';
 import { MERCHANTS } from '@/lib/merchants';
 import { dbConfigured } from '@/lib/db/client';
 import { countRecords } from '@/lib/audit/db';
-import { ENGINE_VERSION } from '../decide/route';
+import { ENGINE_VERSION } from '@/lib/engine/version';
 
 /** Reports the database without letting it fail the healthcheck. */
 async function databaseStatus() {

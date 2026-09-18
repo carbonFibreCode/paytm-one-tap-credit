@@ -7,7 +7,9 @@
  */
 
 import type { MerchantCategory, ScoreFactor, UserProfile } from '../types';
-import { CATEGORY_RELEVANCE } from './gates';
+import { CATEGORY_META } from '../domain';
+import { formatINR } from '../format';
+import { clamp, round } from '../math';
 
 /** A transaction must clear this to be worth interrupting the checkout. */
 export const NUDGE_SCORE_THRESHOLD = 60;
@@ -22,14 +24,6 @@ const WEIGHTS = {
 /** The band where instalments genuinely help: too small is noise, too large is rare. */
 const SWEET_SPOT_LOW = 10_000;
 const SWEET_SPOT_HIGH = 1_00_000;
-
-function clamp(value: number, low = 0, high = 1): number {
-  return Math.min(high, Math.max(low, value));
-}
-
-function rupees(value: number): string {
-  return `₹${Math.round(value).toLocaleString('en-IN')}`;
-}
 
 /**
  * How well the amount sits in the band where an instalment plan is useful.
@@ -122,7 +116,7 @@ export function scoreTransaction(
   const factors: ScoreFactor[] = [];
 
   // 1. Category — is credit a natural fit for what is being bought?
-  const categoryValue = CATEGORY_RELEVANCE[category];
+  const categoryValue = CATEGORY_META[category].relevance;
   factors.push({
     id: 'CATEGORY',
     label: 'Category relevance',
@@ -144,10 +138,10 @@ export function scoreTransaction(
     points: round(fitValue * WEIGHTS.amountFit),
     detail:
       amount >= SWEET_SPOT_LOW && amount <= SWEET_SPOT_HIGH
-        ? `${rupees(amount)} sits inside the ${rupees(SWEET_SPOT_LOW)}–${rupees(
+        ? `${formatINR(amount)} sits inside the ${formatINR(SWEET_SPOT_LOW)}–${formatINR(
             SWEET_SPOT_HIGH,
           )} band where instalments are most useful`
-        : `${rupees(amount)} sits outside the ${rupees(SWEET_SPOT_LOW)}–${rupees(
+        : `${formatINR(amount)} sits outside the ${formatINR(SWEET_SPOT_LOW)}–${formatINR(
             SWEET_SPOT_HIGH,
           )} sweet spot`,
   });
@@ -198,8 +192,4 @@ export function scoreTransaction(
     memoryAdjustment,
     passesThreshold: score >= NUDGE_SCORE_THRESHOLD,
   };
-}
-
-function round(value: number): number {
-  return Math.round(value * 10) / 10;
 }

@@ -8,9 +8,9 @@
  * the app fixes the amount at checkout, and paying it marks the intent paid.
  */
 
-import QRCode from 'qrcode';
 import { useEffect, useState } from 'react';
 import { formatINR } from '@/lib/format';
+import { renderQrSvg } from '@/lib/qr';
 import type { Merchant } from '@/lib/merchants';
 
 interface Issued {
@@ -53,12 +53,7 @@ export function DynamicQr({ merchants }: { merchants: Merchant[] }) {
         error?: string;
       };
       if (!response.ok || !body.intent) throw new Error(body.error ?? `${response.status}`);
-      const svg = await QRCode.toString(body.intent.payload, {
-        type: 'svg',
-        margin: 1,
-        errorCorrectionLevel: 'M',
-        color: { dark: '#05070f', light: '#ffffff' },
-      });
+      const svg = await renderQrSvg(body.intent.payload);
       setIssued({ ...body.intent, svg });
       setNow(Date.now());
     } catch (cause) {

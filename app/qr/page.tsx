@@ -18,7 +18,7 @@
  * which the scanner still accepts.
  */
 
-import QRCode from 'qrcode';
+import { renderQrSvg } from '@/lib/qr';
 import { dbConfigured } from '@/lib/db/client';
 import { ensureStaticIntents } from '@/lib/intents/store';
 import { signingConfigured } from '@/lib/intents/sign';
@@ -35,15 +35,6 @@ export const metadata = {
 // Static intents are created on first render; never bake them into the build.
 export const dynamic = 'force-dynamic';
 
-async function render(payload: string): Promise<string> {
-  return QRCode.toString(payload, {
-    type: 'svg',
-    margin: 1,
-    errorCorrectionLevel: 'M',
-    color: { dark: '#05070f', light: '#ffffff' },
-  });
-}
-
 export default async function QrPage() {
   const stored = dbConfigured() ? await ensureStaticIntents().catch(() => []) : [];
 
@@ -51,7 +42,7 @@ export default async function QrPage() {
     MERCHANTS.map(async (merchant) => {
       const intent = stored.find((row) => row.merchantId === merchant.id) ?? null;
       const payload = intent?.payload ?? buildUpiPayload(merchant);
-      return { merchant, intent, payload, svg: await render(payload) };
+      return { merchant, intent, payload, svg: await renderQrSvg(payload) };
     }),
   );
   const signed = codes.some((code) => code.intent !== null);

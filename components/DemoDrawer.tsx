@@ -18,7 +18,7 @@ import { useApp } from '@/lib/client/state';
 import { useProfile, type ProfilePayload } from '@/lib/client/useProfile';
 import { MERCHANTS } from '@/lib/merchants';
 import { PEOPLE } from '@/lib/people';
-import { LANGUAGE_NAMES } from '@/lib/nudge/templates';
+import { LANGUAGE_NAMES } from '@/lib/domain';
 import { formatINR, formatShortDate } from '@/lib/format';
 import { Pill } from './Chrome';
 import { Sheet } from './Sheet';

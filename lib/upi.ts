@@ -26,27 +26,11 @@
  * browser; signing and verifying live in `lib/intents/sign.ts`.
  */
 
+import { CATEGORY_META } from './domain';
 import { MERCHANTS, type Merchant } from './merchants';
-
-/** Merchant category codes, roughly following the ISO 18245 groupings. */
-const CATEGORY_CODES: Record<string, string> = {
-  electronics: '5732',
-  travel: '4722',
-  jewellery: '5944',
-  apparel: '5651',
-  healthcare: '5912',
-  grocery: '5411',
-  fuel: '5541',
-  bills: '4900',
-  p2p: '0000',
-  wallet_load: '6540',
-  gambling: '7995',
-  crypto: '6051',
-};
-
 /** ISO 18245 code for the merchant's category — the `mc` parameter. */
 export function merchantCategoryCode(merchant: Merchant): string {
-  return CATEGORY_CODES[merchant.category] ?? '0000';
+  return CATEGORY_META[merchant.category].mcc;
 }
 
 /** `Kroma Electronics` → `kroma` */

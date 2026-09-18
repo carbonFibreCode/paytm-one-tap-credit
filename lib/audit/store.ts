@@ -21,6 +21,7 @@
 import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { DecisionTrace } from '../types';
+import { round } from '../math';
 import { dbConfigured } from '../db/client';
 import { insertRecord, readRecordsFromDb } from './db';
 
@@ -142,11 +143,6 @@ export interface AuditSummary {
   withheldByGate: Array<{ gate: string; count: number }>;
   byProduct: Array<{ product: string; count: number }>;
   servedBy: Array<{ path: string; count: number }>;
-}
-
-function round(value: number, places = 1): number {
-  const factor = 10 ** places;
-  return Math.round(value * factor) / factor;
 }
 
 function tally(values: string[]): Array<[string, number]> {
