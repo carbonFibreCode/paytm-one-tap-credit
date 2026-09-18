@@ -40,7 +40,7 @@ import { formatINR } from '@/lib/format';
 import { Monogram } from '../Chrome';
 import { BottomNav } from '../BottomNav';
 import { Sheet } from '../Sheet';
-import { PaytmWordmark } from './PersonaScreen';
+import { PaytmWordmark } from '../ui';
 
 const MONEY_TRANSFER: Array<{ icon: LucideIcon; label: string; action?: 'balance' }> = [
   { icon: Smartphone, label: 'To Mobile' },

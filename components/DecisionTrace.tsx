@@ -13,6 +13,7 @@ import { useState } from 'react';
 import type { Decision } from '@/lib/types';
 import { humaniseGate } from '@/lib/format';
 import { Pill } from './Chrome';
+import { Bar } from './ui';
 
 export function DecisionTrace({ decision }: { decision: Decision }) {
   const [tab, setTab] = useState<'checks' | 'score' | 'signal'>('checks');
@@ -130,18 +131,6 @@ export function DecisionTrace({ decision }: { decision: Decision }) {
           {decision.trace.counterfactual}
         </p>
       </div>
-    </div>
-  );
-}
-
-function Bar({ value, max }: { value: number; max: number }) {
-  const pct = max === 0 ? 0 : Math.max(0, Math.min(100, (value / max) * 100));
-  return (
-    <div className="mt-1 h-1 overflow-hidden rounded-full bg-line">
-      <div
-        className="h-full rounded-full bg-brand transition-[width] duration-500"
-        style={{ width: `${pct}%` }}
-      />
     </div>
   );
 }

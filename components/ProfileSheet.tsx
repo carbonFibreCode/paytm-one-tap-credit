@@ -16,6 +16,7 @@ import { LANGUAGE_NAMES } from '@/lib/domain';
 import { formatINR } from '@/lib/format';
 import { Pill } from './Chrome';
 import { Sheet } from './Sheet';
+import { Bar, Skeleton } from './ui';
 
 export function ProfileSheet() {
   const { infoOpen, toggleInfo, userId, go } = useApp();
@@ -126,12 +127,7 @@ export function ProfileSheet() {
                         {part.points}/{part.max}
                       </span>
                     </div>
-                    <div className="mt-1 h-1 overflow-hidden rounded-full bg-line">
-                      <div
-                        className="h-full rounded-full bg-brand transition-[width] duration-500"
-                        style={{ width: `${(part.points / part.max) * 100}%` }}
-                      />
-                    </div>
+                    <Bar value={part.points} max={part.max} />
                     <p className="mt-0.5 text-[10px] leading-snug text-faint">{part.detail}</p>
                   </div>
                 ))}
@@ -181,15 +177,5 @@ function Section({
       {children}
       {hint ? <p className="mt-2 text-[10px] leading-relaxed text-faint">{hint}</p> : null}
     </section>
-  );
-}
-
-function Skeleton({ rows }: { rows: number }) {
-  return (
-    <div className="space-y-2">
-      {Array.from({ length: rows }, (_, index) => (
-        <div key={index} className="shimmer h-3 rounded" style={{ width: `${90 - index * 12}%` }} />
-      ))}
-    </div>
   );
 }

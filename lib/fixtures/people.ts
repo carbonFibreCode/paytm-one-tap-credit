@@ -4,7 +4,7 @@
  *
  * Deliberately free of any engine imports so screens can pull from it without
  * dragging the ledger generator into the client bundle. The heavier
- * `lib/personas.ts` builds on top of this rather than restating it.
+ * `lib/fixtures/personas.ts` builds on top of this rather than restating it.
  */
 
 import type { Language } from '../types';

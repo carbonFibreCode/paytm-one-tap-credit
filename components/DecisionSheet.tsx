@@ -10,27 +10,14 @@
  */
 
 import { X } from 'lucide-react';
-import type { Decision, ScoreFactor, SignalComponent } from '@/lib/types';
+import type { Decision } from '@/lib/types';
 import { useApp } from '@/lib/client/state';
+import { weakestSignal } from '@/lib/engine/explain';
 import { humaniseGate } from '@/lib/format';
 import { DecisionTrace } from './DecisionTrace';
 import { Sheet } from './Sheet';
 import { Pill } from './Chrome';
-
-/** The component furthest from full marks — the reason a score is held back. */
-export function weakestSignal(components: SignalComponent[]): SignalComponent | null {
-  if (components.length === 0) return null;
-  return components.reduce((lowest, component) =>
-    component.points / component.max < lowest.points / lowest.max ? component : lowest,
-  );
-}
-
-export function weakestFactor(factors: ScoreFactor[]): ScoreFactor | null {
-  if (factors.length === 0) return null;
-  return factors.reduce((lowest, factor) =>
-    factor.points / factor.weight < lowest.points / lowest.weight ? factor : lowest,
-  );
-}
+import { Bar } from './ui';
 
 export function DecisionSheet() {
   const { traceOpen, toggleTrace, decision, clearHistory } = useApp();
@@ -125,8 +112,6 @@ export function Shortfall({ decision }: { decision: Decision }) {
   const weakest = weakestSignal(decision.eligibilityBreakdown);
   if (!weakest) return null;
 
-  const pct = weakest.max === 0 ? 0 : (weakest.points / weakest.max) * 100;
-
   return (
     <div className="rounded-xl border border-line bg-ink/40 p-2.5">
       <div className="flex items-baseline justify-between gap-2">
@@ -138,12 +123,7 @@ export function Shortfall({ decision }: { decision: Decision }) {
           {weakest.points}/{weakest.max}
         </span>
       </div>
-      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-line">
-        <div
-          className="h-full rounded-full bg-warn transition-[width] duration-500"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+      <Bar value={weakest.points} max={weakest.max} tone="warn" />
       <p className="mt-1.5 text-[10px] leading-snug text-faint">{weakest.detail}</p>
     </div>
   );

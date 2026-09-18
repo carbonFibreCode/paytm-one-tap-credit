@@ -13,6 +13,7 @@ import { ChevronRight } from 'lucide-react';
 import { PEOPLE } from '@/lib/fixtures/people';
 import { useApp } from '@/lib/client/state';
 import { formatINR } from '@/lib/format';
+import { PaytmWordmark } from '../ui';
 
 export function PersonaScreen() {
   const { setUser, userId } = useApp();
@@ -80,21 +81,5 @@ export function PersonaScreen() {
         </p>
       </div>
     </div>
-  );
-}
-
-/** Paytm's two-tone wordmark, drawn rather than imported as an asset. */
-export function PaytmWordmark({ size = 26 }: { size?: number }) {
-  return (
-    <span
-      className="inline-flex items-baseline font-bold tracking-tight"
-      style={{ fontSize: size }}
-      aria-label="Paytm"
-    >
-      <span style={{ color: '#00BAF2' }}>pay</span>
-      <span style={{ color: '#20336B' }} className="brightness-150">
-        tm
-      </span>
-    </span>
   );
 }

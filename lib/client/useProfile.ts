@@ -3,12 +3,14 @@
 /**
  * Fetches a persona's derived profile from `/api/profile`.
  *
- * Shared by the demo drawer and the home info sheet so the request, the
- * cancellation and the payload shape are only described once.
+ * SWR rather than a hand-rolled effect: the demo drawer and the info sheet ask
+ * for the same profile, and SWR serves both from one request. It also handles
+ * the cancellation and the stale-response race that the previous version had
+ * to manage by hand.
  */
 
-import { useEffect, useState } from 'react';
-import type { LedgerEntry, ProductState, SignalComponent } from '../types';
+import useSWR from 'swr';
+import type { LedgerEntry, LiveCredit, ProductState, SignalComponent } from '../types';
 
 export interface ProfilePayload {
   userId: string;
@@ -18,6 +20,7 @@ export interface ProfilePayload {
   demonstrates: string;
   eligibilitySignal: number;
   eligibilityBreakdown: SignalComponent[];
+  liveCredit: LiveCredit;
   features: {
     accountAgeDays: number;
     txnCount: number;
@@ -35,30 +38,24 @@ export interface ProfilePayload {
   ledger: { total: number; recent: LedgerEntry[] };
 }
 
+async function fetchProfile(url: string): Promise<ProfilePayload> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`${response.status}`);
+  return response.json();
+}
+
 /** Returns null while loading, or if the request fails — callers show a skeleton. */
 export function useProfile(userId: string, enabled: boolean): ProfilePayload | null {
-  // Keyed by user so a stale profile is never shown for the wrong persona:
-  // switching users reads as "loading" until the new response lands, with no
-  // reset-in-effect needed.
-  const [loaded, setLoaded] = useState<{ userId: string; profile: ProfilePayload } | null>(null);
-
-  useEffect(() => {
-    if (!enabled) return;
-    let cancelled = false;
-
-    fetch(`/api/profile?userId=${encodeURIComponent(userId)}`)
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data: ProfilePayload | null) => {
-        if (!cancelled && data) setLoaded({ userId, profile: data });
-      })
-      .catch(() => {
-        // Callers keep showing the skeleton.
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [userId, enabled]);
-
-  return loaded?.userId === userId ? loaded.profile : null;
+  const { data } = useSWR(
+    enabled ? `/api/profile?userId=${encodeURIComponent(userId)}` : null,
+    fetchProfile,
+    {
+      // A payment changes the profile, so it must not be served stale when the
+      // drawer is reopened — but it should not refetch while it is just sitting
+      // there behind a closed sheet.
+      revalidateOnFocus: false,
+      keepPreviousData: false,
+    },
+  );
+  return data ?? null;
 }

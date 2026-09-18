@@ -22,6 +22,7 @@ import { LANGUAGE_NAMES } from '@/lib/domain';
 import { formatINR, formatShortDate } from '@/lib/format';
 import { Pill } from './Chrome';
 import { Sheet } from './Sheet';
+import { Chip, Skeleton } from './ui';
 
 const QUICK_AMOUNTS = [450, 12_000, 50_000, 80_000, 1_20_000, 2_50_000];
 
@@ -71,18 +72,14 @@ export function DemoDrawer() {
               <Section title="Who is paying">
                 <div className="grid grid-cols-2 gap-2">
                   {PEOPLE.map((person) => (
-                    <button
+                    <Chip
                       key={person.userId}
-                      type="button"
+                      active={userId === person.userId}
                       onClick={() => setUser(person.userId)}
-                      className={`rounded-xl border p-2 text-left text-[11px] transition ${
-                        userId === person.userId
-                          ? 'border-brand/50 bg-brand/10 text-body'
-                          : 'border-line bg-elevated text-muted hover:text-body'
-                      }`}
+                      className="p-2 text-left"
                     >
                       {person.displayName}
-                    </button>
+                    </Chip>
                   ))}
                 </div>
                 {profile ? (
@@ -95,52 +92,37 @@ export function DemoDrawer() {
               <Section title="Transaction">
                 <div className="flex flex-wrap gap-1.5">
                   {QUICK_AMOUNTS.map((value) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setAmount(value)}
-                      className={`rounded-lg border px-2 py-1 text-[11px] transition ${
-                        amount === value
-                          ? 'border-brand/50 bg-brand/10 text-brand'
-                          : 'border-line bg-elevated text-muted hover:text-body'
-                      }`}
-                    >
+                    <Chip key={value} active={amount === value} onClick={() => setAmount(value)}>
                       {formatINR(value)}
-                    </button>
+                    </Chip>
                   ))}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {MERCHANTS.map((merchant) => (
-                    <button
+                    <Chip
                       key={merchant.id}
-                      type="button"
+                      active={merchantId === merchant.id}
                       onClick={() => selectMerchant(merchant.id)}
-                      className={`rounded-lg border px-2 py-1 text-[11px] transition ${
-                        merchantId === merchant.id
-                          ? 'border-brand/50 bg-brand/10 text-brand'
-                          : 'border-line bg-elevated text-muted hover:text-body'
-                      }`}
                     >
                       {merchant.name}
-                    </button>
+                    </Chip>
                   ))}
                 </div>
               </Section>
 
               <Section title="Nudge language">
                 <div className="flex flex-wrap gap-1.5">
-                  <LanguageChip
-                    active={languageOverride === null}
-                    onClick={() => setLanguage(null)}
-                    label="Auto"
-                  />
+                  <Chip active={languageOverride === null} onClick={() => setLanguage(null)}>
+                    Auto
+                  </Chip>
                   {(Object.keys(LANGUAGE_NAMES) as Language[]).map((code) => (
-                    <LanguageChip
+                    <Chip
                       key={code}
                       active={languageOverride === code}
                       onClick={() => setLanguage(code)}
-                      label={LANGUAGE_NAMES[code]}
-                    />
+                    >
+                      {LANGUAGE_NAMES[code]}
+                    </Chip>
                   ))}
                 </div>
               </Section>
@@ -148,19 +130,15 @@ export function DemoDrawer() {
               <Section title="Orchestration">
                 <div className="flex gap-1.5">
                   {(['orchestrated', 'direct'] as const).map((option) => (
-                    <button
+                    <Chip
                       key={option}
-                      type="button"
+                      active={mode === option}
                       onClick={() => setMode(option)}
                       disabled={option === 'orchestrated' && !n8nAvailable}
-                      className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] transition disabled:opacity-40 ${
-                        mode === option
-                          ? 'border-brand/50 bg-brand/10 text-brand'
-                          : 'border-line bg-elevated text-muted hover:text-body'
-                      }`}
+                      className="flex-1"
                     >
                       {option === 'orchestrated' ? 'via n8n' : 'direct API'}
-                    </button>
+                    </Chip>
                   ))}
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-faint">
@@ -212,10 +190,7 @@ export function DemoDrawer() {
                 {profile ? (
                   <MemoryPanel profile={profile} />
                 ) : (
-                  <div className="space-y-2">
-                    <div className="shimmer h-3 w-2/3 rounded" />
-                    <div className="shimmer h-3 w-1/2 rounded" />
-                  </div>
+                  <Skeleton rows={2} />
                 )}
               </Section>
       </div>
@@ -301,30 +276,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-faint">{title}</h3>
       {children}
     </section>
-  );
-}
-
-function LanguageChip({
-  active,
-  onClick,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-lg border px-2.5 py-1 text-[11px] transition ${
-        active
-          ? 'border-brand/50 bg-brand/10 text-brand'
-          : 'border-line bg-elevated text-muted hover:text-body'
-      }`}
-    >
-      {label}
-    </button>
   );
 }
 
