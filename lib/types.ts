@@ -188,6 +188,8 @@ export interface DecisionRequest {
   selectedInstrument?: Instrument;
   /** Owned by the client (localStorage), so frequency caps survive cold starts. */
   nudgeHistory?: NudgeHistoryEntry[];
+  /** The scanned payment intent this transaction came from, if any. Ignored by the engine. */
+  intentRef?: string;
 }
 
 /** Machine-readable reason a nudge was withheld. */

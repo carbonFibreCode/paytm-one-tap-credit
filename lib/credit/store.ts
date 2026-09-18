@@ -18,6 +18,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import type { BatchItem } from 'drizzle-orm/batch';
 import { db, withTimeout } from '../db/client';
 import {
   creditAccounts,
@@ -25,6 +26,7 @@ import {
   insertCreditAccountSchema,
   insertInstallmentSchema,
   insertPaymentSchema,
+  paymentIntents,
   payments,
 } from '../db/schema';
 import { buildSchedule } from '../engine/emi';
@@ -39,6 +41,8 @@ export interface RecordPaymentInput {
   merchantName: string;
   /** The decision this payment answered, when there was one. */
   decisionKey?: string | null;
+  /** The scanned intent this payment settles; it is marked paid in the same batch. */
+  intentRef?: string | null;
   amount: number;
   method: PaymentMethod;
   partner?: string | null;
@@ -75,16 +79,28 @@ export async function recordPayment(input: RecordPaymentInput): Promise<Recorded
     merchantId: input.merchantId,
     merchantName: input.merchantName,
     decisionKey: input.decisionKey ?? null,
+    intentRef: input.intentRef ?? null,
     amount: input.amount,
     method: input.method,
     partner: input.partner ?? null,
     paidAt: input.at,
   });
 
+  // Everything for this payment lands in one batch — one transaction on Neon.
+  const statements: BatchItem<'pg'>[] = [client.insert(payments).values(payment)];
+  if (input.intentRef) {
+    statements.push(
+      client
+        .update(paymentIntents)
+        .set({ status: 'paid', paidAt: input.at })
+        .where(eq(paymentIntents.ref, input.intentRef)),
+    );
+  }
+
   const product: ProductId | null =
     input.method === 'postpaid' || input.method === 'card' ? input.method : null;
   if (!product || !input.tenure) {
-    await withTimeout(client.insert(payments).values(payment));
+    await withTimeout(client.batch(statements as [BatchItem<'pg'>, ...BatchItem<'pg'>[]]));
     return { paymentId, accountId: null, installments: 0 };
   }
 
@@ -117,13 +133,11 @@ export async function recordPayment(input: RecordPaymentInput): Promise<Recorded
     insertInstallmentSchema.parse({ accountId, seq: row.index, dueDate: row.date, amount: row.amount }),
   );
 
-  await withTimeout(
-    client.batch([
-      client.insert(payments).values(payment),
-      client.insert(creditAccounts).values(account),
-      client.insert(emiInstallments).values(rows),
-    ]),
+  statements.push(
+    client.insert(creditAccounts).values(account),
+    client.insert(emiInstallments).values(rows),
   );
+  await withTimeout(client.batch(statements as [BatchItem<'pg'>, ...BatchItem<'pg'>[]]));
   return { paymentId, accountId, installments: rows.length };
 }
 

@@ -71,6 +71,7 @@ const decideBody = z.object({
   timestamp: isoTimestamp.optional(),
   selectedInstrument: instrument.optional(),
   nudgeHistory,
+  intentRef: z.string().min(1).optional(),
 });
 
 const nudgeTextBody = z.object({
@@ -160,6 +161,7 @@ export function parseDecideRequest(body: unknown, now: string): Validated<Decide
         timestamp: input.timestamp ?? now,
         selectedInstrument: input.selectedInstrument,
         nudgeHistory: input.nudgeHistory,
+        intentRef: input.intentRef,
       },
     },
   };

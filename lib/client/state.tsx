@@ -25,6 +25,7 @@ import type { Decision, EmiOption, Instrument, Language, NudgeHistoryEntry } fro
 import { getMerchant, MERCHANTS } from '../merchants';
 import { personOrDefault } from '../people';
 import {
+  attachIntentDecision,
   n8nConfigured,
   requestDecision,
   reportOutcome,
@@ -82,6 +83,8 @@ interface State {
   merchantId: string;
   amount: number;
   instrument: Instrument;
+  /** Set when checkout began from a verified QR scan; null when picked from a list. */
+  intentRef: string | null;
 
   decision: Decision | null;
   decisionMeta: DecisionMeta | null;
@@ -108,7 +111,7 @@ interface State {
 
 type Action =
   | { type: 'go'; screen: Screen }
-  | { type: 'selectMerchant'; merchantId: string; amount: number }
+  | { type: 'selectMerchant'; merchantId: string; amount: number; intentRef?: string }
   | { type: 'setAmount'; amount: number }
   | { type: 'setInstrument'; instrument: Instrument }
   | { type: 'setUser'; userId: string }
@@ -140,6 +143,7 @@ const initialState: State = {
   merchantId: DEFAULT_MERCHANT.id,
   amount: DEFAULT_MERCHANT.suggestedAmount,
   instrument: 'upi',
+  intentRef: null,
   decision: null,
   decisionMeta: null,
   decisionError: null,
@@ -182,6 +186,7 @@ function reducer(state: State, action: Action): State {
         merchantId: action.merchantId,
         amount: action.amount,
         instrument: 'upi',
+        intentRef: action.intentRef ?? null,
         screen: 'checkout',
       };
 
@@ -290,7 +295,7 @@ interface Store extends State {
   payments: PaymentRecord[];
   n8nAvailable: boolean;
   go: (screen: Screen) => void;
-  selectMerchant: (merchantId: string, amount?: number) => void;
+  selectMerchant: (merchantId: string, amount?: number, intentRef?: string) => void;
   setAmount: (amount: number) => void;
   setInstrument: (instrument: Instrument) => void;
   setUser: (userId: string) => void;
@@ -346,7 +351,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   // --- decisioning ---------------------------------------------------------
 
-  const { screen, userId, merchantId, amount, instrument, mode, historyLoaded } = state;
+  const { screen, userId, merchantId, amount, instrument, mode, historyLoaded, intentRef } = state;
   // A zero amount is not a transaction — the keypad passes through it on the
   // way down, and asking the engine to judge it would only produce a 400.
   const needsDecision = screen === 'checkout' && historyLoaded && amount > 0;
@@ -366,9 +371,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }, DECISION_DEBOUNCE_MS);
 
     function runDecision() {
-    requestDecision({ userId, merchantId, amount, selectedInstrument: instrument, nudgeHistory: history }, mode)
+    requestDecision(
+      { userId, merchantId, amount, selectedInstrument: instrument, nudgeHistory: history, intentRef: intentRef ?? undefined },
+      mode,
+    )
       .then((outcome) => {
         if (cancelled) return;
+        // Close the loop on the QR: the intent now knows which decision it led to.
+        if (intentRef) attachIntentDecision(intentRef, outcome.decision.transactionId);
         dispatch({
           type: 'decisionOk',
           decision: outcome.decision,
@@ -403,7 +413,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     // `history` is intentionally excluded: recording an outcome should not
     // re-run the decision that produced it mid-animation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [needsDecision, userId, merchantId, amount, instrument, mode]);
+  }, [needsDecision, userId, merchantId, amount, instrument, mode, intentRef]);
 
   // --- nudge copy ----------------------------------------------------------
 
@@ -499,7 +509,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       n8nAvailable: n8nConfigured(),
 
       go: (next) => dispatch({ type: 'go', screen: next }),
-      selectMerchant: (id, amount) => {
+      selectMerchant: (id, amount, intentRef) => {
         const target = getMerchant(id);
         if (!target) return;
         // A scanned QR can carry its own amount; otherwise use the merchant's.
@@ -507,6 +517,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           type: 'selectMerchant',
           merchantId: id,
           amount: amount && amount > 0 ? Math.round(amount) : target.suggestedAmount,
+          intentRef,
         });
       },
       setAmount: (next) => dispatch({ type: 'setAmount', amount: Math.max(0, Math.round(next)) }),
@@ -541,6 +552,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           amount: payment.amount,
           method: payment.method,
           decisionKey: state.decision?.transactionId,
+          intentRef: state.intentRef ?? undefined,
           at: payment.at!,
         });
       },
@@ -566,6 +578,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           partner: payment.partner,
           tenure,
           decisionKey: state.decision?.transactionId,
+          intentRef: state.intentRef ?? undefined,
           at: payment.at!,
         });
       },

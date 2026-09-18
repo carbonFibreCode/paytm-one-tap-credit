@@ -15,17 +15,20 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, CameraOff, ChevronLeft, Images, Zap } from 'lucide-react';
+import { Camera, CameraOff, ChevronLeft, Images, ShieldAlert, Zap } from 'lucide-react';
 import { MERCHANTS } from '@/lib/merchants';
 import { useApp } from '@/lib/client/state';
 import { formatINR } from '@/lib/format';
 import { parseUpiPayload } from '@/lib/upi';
+import { verifyScan } from '@/lib/client/api';
 import { Monogram } from '../Chrome';
 import { BottomNav } from '../BottomNav';
 
 /** How long the lock-on animation holds before checkout opens. */
 const LOCK_ON_MS = 700;
 const SCAN_INTERVAL_MS = 400;
+/** How long a refusal stays on screen before scanning resumes. */
+const REFUSAL_MS = 3_200;
 
 type CameraState = 'idle' | 'starting' | 'live' | 'denied' | 'unsupported';
 
@@ -34,20 +37,64 @@ export function ScannerScreen() {
   const [locked, setLocked] = useState<string | null>(null);
   const [camera, setCamera] = useState<CameraState>('idle');
   const [canDecode, setCanDecode] = useState(false);
+  /** A verification refusal — shown in the viewfinder, then cleared. */
+  const [refusal, setRefusal] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const lockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refusalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** One verification in flight at a time; frames keep arriving while we wait. */
+  const verifying = useRef(false);
 
   const lockOn = useCallback(
-    (merchantId: string, amount?: number) => {
+    (merchantId: string, amount?: number, intentRef?: string) => {
       setLocked((current) => {
         if (current) return current;
-        lockTimer.current = setTimeout(() => selectMerchant(merchantId, amount), LOCK_ON_MS);
+        lockTimer.current = setTimeout(
+          () => selectMerchant(merchantId, amount, intentRef),
+          LOCK_ON_MS,
+        );
         return merchantId;
       });
     },
     [selectMerchant],
+  );
+
+  const refuse = useCallback((message: string) => {
+    setRefusal(message);
+    if (refusalTimer.current) clearTimeout(refusalTimer.current);
+    refusalTimer.current = setTimeout(() => setRefusal(null), REFUSAL_MS);
+  }, []);
+
+  /**
+   * A signed QR is a payment intent: ask the server to verify it before
+   * locking on, the way a UPI app checks a signed intent before it shows the
+   * pay screen. A refusal is shown and scanning resumes. If the server cannot
+   * be reached at all, trust the local parse — the venue wifi must never turn
+   * a working demo into a blank viewfinder.
+   */
+  const handleScan = useCallback(
+    async (raw: string) => {
+      const scanned = parseUpiPayload(raw);
+      if (!scanned) return;
+      if (!scanned.tr) {
+        lockOn(scanned.merchantId, scanned.amount);
+        return;
+      }
+      if (verifying.current) return;
+      verifying.current = true;
+      try {
+        const verdict = await verifyScan(scanned.tr, raw);
+        if (verdict.ok) lockOn(verdict.merchantId, verdict.amount, verdict.ref);
+        else refuse(verdict.message);
+      } catch {
+        lockOn(scanned.merchantId, scanned.amount);
+      } finally {
+        verifying.current = false;
+      }
+    },
+    [lockOn, refuse],
   );
 
   const stopCamera = useCallback(() => {
@@ -81,13 +128,14 @@ export function ScannerScreen() {
     () => () => {
       stopCamera();
       if (lockTimer.current) clearTimeout(lockTimer.current);
+      if (refusalTimer.current) clearTimeout(refusalTimer.current);
     },
     [stopCamera],
   );
 
   // Poll frames for a QR code while the camera is live.
   useEffect(() => {
-    if (camera !== 'live' || !canDecode || locked) return;
+    if (camera !== 'live' || !canDecode || locked || refusal) return;
 
     let cancelled = false;
     let detector: { detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>> };
@@ -107,8 +155,7 @@ export function ScannerScreen() {
         const codes = await detector.detect(video);
         const value = codes[0]?.rawValue;
         if (!value) return;
-        const scanned = parseUpiPayload(value);
-        if (scanned) lockOn(scanned.merchantId, scanned.amount);
+        void handleScan(value);
       } catch {
         // A single failed frame is not worth reporting.
       }
@@ -118,7 +165,7 @@ export function ScannerScreen() {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [camera, canDecode, locked, lockOn]);
+  }, [camera, canDecode, locked, refusal, handleScan]);
 
   const lockedMerchant = MERCHANTS.find((merchant) => merchant.id === locked);
 
@@ -170,7 +217,19 @@ export function ScannerScreen() {
         ) : null}
 
         <AnimatePresence>
-          {lockedMerchant ? (
+          {refusal ? (
+            <motion.div
+              key="refusal"
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/80 px-6 text-center"
+            >
+              <ShieldAlert size={30} className="text-[#ff6b6b]" />
+              <p className="text-[12px] font-semibold text-white">QR refused</p>
+              <p className="text-[11px] leading-relaxed text-white/70">{refusal}</p>
+            </motion.div>
+          ) : lockedMerchant ? (
             <motion.div
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -179,7 +238,7 @@ export function ScannerScreen() {
             >
               <Monogram text={lockedMerchant.monogram} tint={lockedMerchant.tint} size={56} />
               <p className="text-[13px] font-semibold text-white">{lockedMerchant.name}</p>
-              <p className="text-[10px] text-brand">QR detected</p>
+              <p className="text-[10px] text-brand">QR detected · signature verified</p>
             </motion.div>
           ) : camera !== 'live' ? (
             <motion.div

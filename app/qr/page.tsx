@@ -1,55 +1,91 @@
 /**
- * Printable merchant QR codes.
+ * Merchant QR codes — stickers and bills.
  *
  * Open this on a laptop and scan the codes with the app on a phone — that turns
  * the scanner from a simulation into a real end-to-end demo: a camera reads an
- * actual UPI QR, the engine decides, and the nudge appears.
+ * actual signed UPI intent, the server verifies it, the engine decides, and the
+ * nudge appears.
  *
- * Rendered on the server as inline SVG, so there is no QR library in the client
- * bundle and the page prints cleanly.
+ * Two kinds, the same two a real merchant has:
+ *
+ *   static   the sticker by the till — one per merchant, never expires, no
+ *            amount (the app pre-fills the demo amount at checkout)
+ *   dynamic  a bill — generated below for one amount, expires in 15 minutes,
+ *            refused after it is paid
+ *
+ * Both are rows in `payment_intents`; the SVG is rendered from the stored
+ * payload. Without a database the page falls back to unsigned merchant labels,
+ * which the scanner still accepts.
  */
 
 import QRCode from 'qrcode';
+import { dbConfigured } from '@/lib/db/client';
+import { ensureStaticIntents } from '@/lib/intents/store';
+import { signingConfigured } from '@/lib/intents/sign';
 import { MERCHANTS } from '@/lib/merchants';
 import { buildUpiPayload, upiVpa } from '@/lib/upi';
 import { formatINR } from '@/lib/format';
+import { DynamicQr } from '@/components/DynamicQr';
 
 export const metadata = {
   title: 'Merchant QR codes — One-Tap Credit',
   description: 'Scan these with the app to run the full payment flow from a real camera.',
 };
 
+// Static intents are created on first render; never bake them into the build.
+export const dynamic = 'force-dynamic';
+
+async function render(payload: string): Promise<string> {
+  return QRCode.toString(payload, {
+    type: 'svg',
+    margin: 1,
+    errorCorrectionLevel: 'M',
+    color: { dark: '#05070f', light: '#ffffff' },
+  });
+}
+
 export default async function QrPage() {
+  const stored = dbConfigured() ? await ensureStaticIntents().catch(() => []) : [];
+
   const codes = await Promise.all(
     MERCHANTS.map(async (merchant) => {
-      const payload = buildUpiPayload(merchant, merchant.suggestedAmount);
-      const svg = await QRCode.toString(payload, {
-        type: 'svg',
-        margin: 1,
-        errorCorrectionLevel: 'M',
-        color: { dark: '#05070f', light: '#ffffff' },
-      });
-      return { merchant, payload, svg };
+      const intent = stored.find((row) => row.merchantId === merchant.id) ?? null;
+      const payload = intent?.payload ?? buildUpiPayload(merchant);
+      return { merchant, intent, payload, svg: await render(payload) };
     }),
   );
+  const signed = codes.some((code) => code.intent !== null);
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
       <header className="mb-8">
         <h1 className="text-[22px] font-semibold text-body">Merchant QR codes</h1>
         <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-muted">
-          Each code is a standard UPI intent — the same shape a real Paytm merchant QR carries —
-          with the amount pre-filled. Open the app on a phone, tap <strong>Scan &amp; Pay</strong>,
-          allow the camera, and point it at one of these.
+          Each code is a standard UPI intent — the same shape a real Paytm merchant QR carries.
+          Open the app on a phone, tap <strong>Scan &amp; Pay</strong>, allow the camera, and point
+          it at one of these.
         </p>
         <p className="mt-2 text-[11px] text-faint">
+          {signed
+            ? `Signed payment intents, stored in Postgres${
+                signingConfigured() ? '' : ' (development signing key)'
+              }. The scanner verifies the signature before it locks on — an altered code is refused.`
+            : 'No database configured — showing unsigned merchant labels.'}{' '}
           QR decoding uses the browser&rsquo;s built-in detector, which Chrome on Android supports
           and Safari does not. On Safari the merchant list below the viewfinder does the same job.
         </p>
       </header>
 
+      {signed ? (
+        <section className="mb-8">
+          <h2 className="mb-2 text-[13px] font-semibold text-body">Bill QR — the merchant&rsquo;s till</h2>
+          <DynamicQr merchants={MERCHANTS} />
+        </section>
+      ) : null}
+
+      <h2 className="mb-2 text-[13px] font-semibold text-body">Sticker QRs — one per merchant</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {codes.map(({ merchant, payload, svg }) => (
+        {codes.map(({ merchant, intent, payload, svg }) => (
           <article
             key={merchant.id}
             className="break-inside-avoid rounded-2xl border border-line bg-surface p-4"
@@ -69,8 +105,11 @@ export default async function QrPage() {
                 <p className="truncate text-[13px] font-semibold text-body">{merchant.name}</p>
                 <p className="truncate text-[10px] text-muted">{upiVpa(merchant)}</p>
               </div>
-              <span className="shrink-0 text-[12px] font-semibold text-brand">
-                {formatINR(merchant.suggestedAmount)}
+              <span className="shrink-0 text-right text-[10px] text-muted">
+                <span className="block text-[12px] font-semibold text-brand">
+                  {formatINR(merchant.suggestedAmount)}
+                </span>
+                pre-filled in app
               </span>
             </div>
 
@@ -82,6 +121,13 @@ export default async function QrPage() {
 
             <p className="mt-2 text-[9px] leading-relaxed text-faint">
               {merchant.creditEnabled ? merchant.blurb : `${merchant.blurb} · outside credit network`}
+              {intent ? (
+                <>
+                  {' · '}
+                  <span className="text-brand">signed</span> · ref{' '}
+                  <code className="font-mono">{intent.ref}</code>
+                </>
+              ) : null}
             </p>
             <code className="mt-1.5 block break-all font-mono text-[8px] leading-tight text-faint/70">
               {payload}
@@ -112,6 +158,11 @@ export default async function QrPage() {
           <li>
             <strong className="text-body">Sharma General Store</strong> — outside the credit
             network.
+          </li>
+          <li>
+            <strong className="text-body">A bill QR, paid, then scanned again</strong> — refused:
+            the intent is already paid. Edit one character of a payload and it is refused for a
+            failed signature.
           </li>
         </ul>
       </footer>

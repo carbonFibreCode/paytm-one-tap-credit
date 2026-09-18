@@ -55,8 +55,13 @@ tables, both in `lib/db/schema.ts`:
 - `decisions` — one row per engine decision, `trace` kept whole as `jsonb`.
   **Append-only:** a trigger rejects `UPDATE` and `DELETE` at the database.
 - `nudge_events` — shown / accepted / declined, linked to its decision.
+- `payment_intents` — every QR code, as the signed `upi://pay?…` payload it
+  encodes plus its lifecycle (`created → scanned → paid / expired`). Static
+  stickers are created on first visit to `/qr`; bill codes come from
+  `POST /api/intents`. The SVG is rendered from the row by
+  `/api/intents/[ref]/qr`, never stored.
 - `payments` → `credit_accounts` → `emi_installments` — written together in one
-  batch when a payment goes on credit. Active accounts are read back on every
+  batch when a payment goes on credit, marking the intent paid in the same batch. Active accounts are read back on every
   decision as `LiveCredit` and lower the affordability capacity and the
   available limit. `DELETE /api/payments?userId=` is the demo reset.
 
@@ -205,6 +210,9 @@ NEXT_PUBLIC_N8N_OUTCOME_WEBHOOK_URL=
 
 # Neon Postgres — without it, the audit trail is the local file + buffer
 DATABASE_URL=
+
+# Signs every QR payload; must match on Vercel or printed codes stop verifying
+QR_SIGNING_SECRET=
 ```
 
 In the **sidecar** (`cognee-service/`), not the app:

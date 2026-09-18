@@ -197,8 +197,41 @@ trail is never touched by a reset — it is append-only.
 
 `GET /api/payments?userId=u_rohit` shows the ledger with schedules.
 
-Planned next: **Phase 2** — `payment_intents` so the QR carries an intent id
-(store the intent, never the image). Full design in the 18 Sep session notes.
+### Database — Phase 2 done (18 Sep): QR codes are payment intents
+
+**What fintechs actually do, and what this now does:** a QR is a rendering of
+a `upi://pay?…` string; the thing stored is the *intent* the string points to.
+`payment_intents` holds one row per code — `ref` (the UPI `tr` parameter),
+merchant, VPA, MCC, amount (dynamic only), expiry (dynamic only), the exact
+signed `payload`, and a `created → scanned → paid / expired` status. The image
+is never stored: `/api/intents/[ref]/qr` renders SVG from `payload` on demand.
+
+**Signed intents.** Every payload ends in `&sign=<HMAC-SHA256 over everything
+before it>` — the UPI 2.0 signed-intent idea, with an HMAC because this app
+is both issuer and verifier. `QR_SIGNING_SECRET` must be the same everywhere
+(it is set locally and on Vercel prod + preview); change it and every printed
+code stops verifying, which is the correct failure.
+
+**The scan flow.** Scanner reads a code → if it carries `tr`, `POST
+/api/intents/[ref]` with the raw payload → the server verifies the signature,
+checks the ref is one we issued and the payload is byte-for-byte what we
+issued, checks expiry and paid state, marks it `scanned` → the app locks on
+with `intentRef`. A refusal is shown in the viewfinder with its reason
+(*altered*, *expired*, *already paid*, *not ours*). If the server is
+unreachable the local parse is trusted, as before — wifi cannot blank the
+scanner. `decisionOk` PATCHes the decision key onto the intent; the payment
+batch marks it `paid`. Chain: `payment_intents.decision_key` →
+`decisions.decision_key`; `payments.intent_ref` → `payment_intents.ref`;
+`credit_accounts.payment_id` → `payments.id`.
+
+**`/qr` page.** Sticker codes (static, one per merchant, no amount — the app
+pre-fills the demo amount) come from `ensureStaticIntents()`, so the same ref
+prints every time (`OTCSKROMA`…). A **bill QR** generator issues a dynamic
+code for one amount with a 15-minute countdown; pay it and a re-scan is
+refused. Demo beats: scan a paid bill again; edit one character of a payload.
+
+**Not done:** n8n's audit node does not yet pass `intentRef` through (the link
+is made client-side via PATCH, which covers both paths).
 
 ---
 

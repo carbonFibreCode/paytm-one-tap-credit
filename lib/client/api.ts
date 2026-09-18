@@ -27,6 +27,8 @@ export interface DecideParams {
   selectedInstrument?: Instrument;
   nudgeHistory: NudgeHistoryEntry[];
   language?: Language;
+  /** The scanned payment intent, when checkout started from a QR. */
+  intentRef?: string;
 }
 
 export interface DecideOutcome {
@@ -88,6 +90,7 @@ export async function requestDecision(
     selectedInstrument: params.selectedInstrument,
     nudgeHistory: params.nudgeHistory,
     language: params.language,
+    intentRef: params.intentRef,
     timestamp: new Date().toISOString(),
   };
 
@@ -157,13 +160,58 @@ export async function requestNudgeText(params: NudgeTextParams): Promise<NudgeTe
   return postJson<NudgeTextResult>('/api/nudge-text', params, DIRECT_TIMEOUT_MS);
 }
 
+/** Budget for verifying a scanned QR before the offline fallback takes over. */
+const SCAN_VERIFY_TIMEOUT_MS = 2_500;
+
+export type ScanVerdict =
+  | { ok: true; ref: string; merchantId: string; amount?: number }
+  | { ok: false; reason: string; message: string };
+
 /**
- * Tell n8n what the user did with an offer.
- *
- * Deliberately fire-and-forget: the accept/decline animation must never wait on
- * a workflow, and a logging failure must never surface to the user. The outcome
- * is already persisted locally — this only feeds the audit trail and the digest.
+ * Verify a scanned payment intent with the server: signature, issuance,
+ * expiry, not already paid. Throws only on a network failure, so the caller
+ * can fall back to the local parse — a refusal is a verdict, not an error.
  */
+export async function verifyScan(ref: string, payload: string): Promise<ScanVerdict> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), SCAN_VERIFY_TIMEOUT_MS);
+  try {
+    const response = await fetch(`/api/intents/${encodeURIComponent(ref)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payload }),
+      signal: controller.signal,
+    });
+    const body = (await response.json()) as {
+      ok?: boolean;
+      merchantId?: string;
+      amount?: number | null;
+      reason?: string;
+      message?: string;
+      error?: string;
+    };
+    if (response.ok && body.ok && body.merchantId) {
+      return { ok: true, ref, merchantId: body.merchantId, amount: body.amount ?? undefined };
+    }
+    if (body.reason && body.message) return { ok: false, reason: body.reason, message: body.message };
+    throw new Error(body.error ?? `${response.status}`);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Record which decision a scanned intent led to. Fire-and-forget. */
+export function attachIntentDecision(ref: string, decisionKey: string): void {
+  void fetch(`/api/intents/${encodeURIComponent(ref)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ decisionKey }),
+    keepalive: true,
+  }).catch(() => {
+    // The trail has the decision either way; this only adds the link.
+  });
+}
+
 export interface PaymentReport {
   userId: string;
   merchantId: string;
@@ -173,6 +221,8 @@ export interface PaymentReport {
   tenure?: EmiOption;
   /** The decision this payment answered, so the ledger can be joined to the trail. */
   decisionKey?: string;
+  /** The scanned intent this payment settles; marks it paid. */
+  intentRef?: string;
   at: string;
 }
 
@@ -202,6 +252,13 @@ export function resetUserCredit(userId: string): void {
   });
 }
 
+/**
+ * Tell n8n what the user did with an offer.
+ *
+ * Deliberately fire-and-forget: the accept/decline animation must never wait on
+ * a workflow, and a logging failure must never surface to the user. The outcome
+ * is already persisted locally — this only feeds the audit trail and the digest.
+ */
 export function reportOutcome(outcome: {
   transactionId: string;
   userId: string;

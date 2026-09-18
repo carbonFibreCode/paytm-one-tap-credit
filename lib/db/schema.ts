@@ -91,6 +91,43 @@ export const nudgeEvents = pgTable(
   (table) => [index('nudge_events_user_occurred_idx').on(table.userId, table.occurredAt)],
 );
 
+// --- payment intents: what a QR code actually is -----------------------------
+// A QR is a deterministic rendering of a `upi://pay?…` string; the row here is
+// the thing it points to. The image is never stored — `/api/intents/[ref]/qr`
+// renders it from `payload` on demand, and `payload` is stored byte-for-byte
+// so a scanned code can be compared to what was issued.
+
+export const intentKindEnum = pgEnum('intent_kind', ['static', 'dynamic']);
+export const intentStatusEnum = pgEnum('intent_status', ['created', 'scanned', 'paid', 'expired']);
+
+export const paymentIntents = pgTable(
+  'payment_intents',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    /** The `tr` parameter. One per merchant for static codes; one per bill for dynamic. */
+    ref: text().notNull().unique(),
+    merchantId: text().notNull(),
+    vpa: text().notNull(),
+    mcc: text().notNull(),
+    kind: intentKindEnum().notNull(),
+    /** Fixed on a dynamic code; null on a static one, where the customer enters it. */
+    amount: integer(),
+    currency: text().notNull().default('INR'),
+    /** The exact signed string encoded in the QR. */
+    payload: text().notNull(),
+    signature: text().notNull(),
+    status: intentStatusEnum().notNull().default('created'),
+    /** Dynamic codes expire; static ones never do. */
+    expiresAt: timestamp({ withTimezone: true, mode: 'string' }),
+    createdAt: timestamp({ withTimezone: true, mode: 'string' }).notNull(),
+    scannedAt: timestamp({ withTimezone: true, mode: 'string' }),
+    paidAt: timestamp({ withTimezone: true, mode: 'string' }),
+    /** The decision this scan led to — links the intent into the audit trail. */
+    decisionKey: text(),
+  },
+  (table) => [index('payment_intents_merchant_kind_idx').on(table.merchantId, table.kind)],
+);
+
 // --- money: payments and the credit they opened ------------------------------
 // This is the part of the system that did not exist before the database: what
 // happened *after* an offer was accepted. A credit account and its instalment
@@ -111,6 +148,8 @@ export const payments = pgTable(
     merchantName: text().notNull(),
     /** The decision this payment answered, when there was one. */
     decisionKey: text(),
+    /** The scanned intent this payment settled. Linked by value, like `decisionKey`. */
+    intentRef: text(),
     amount: integer().notNull(),
     method: paymentMethodEnum().notNull(),
     partner: text(),
@@ -227,6 +266,19 @@ export const insertInstallmentSchema = createInsertSchema(emiInstallments, {
   dueDate: () => isoDate,
 });
 
+export const insertIntentSchema = createInsertSchema(paymentIntents, {
+  ref: (schema) => schema.min(4),
+  merchantId: (schema) => schema.min(1),
+  vpa: (schema) => schema.includes('@'),
+  mcc: (schema) => schema.regex(/^\d{4}$/),
+  amount: (schema) => schema.positive(),
+  payload: (schema) => schema.startsWith('upi://pay?'),
+  signature: (schema) => schema.min(16),
+  createdAt: () => isoTimestamp,
+  expiresAt: () => isoTimestamp.nullable(),
+});
+
+export type IntentRow = typeof paymentIntents.$inferSelect;
 export type PaymentRow = typeof payments.$inferSelect;
 export type CreditAccountRow = typeof creditAccounts.$inferSelect;
 export type InstallmentRow = typeof emiInstallments.$inferSelect;

@@ -36,6 +36,7 @@ const body = z.object({
   merchantId: z.string().min(1),
   merchantName: z.string().min(1).optional(),
   decisionKey: z.string().min(1).optional(),
+  intentRef: z.string().min(1).optional(),
   amount: rupees,
   method: z.enum(['upi', 'wallet', 'postpaid', 'card']),
   partner: z.string().min(1).optional(),
