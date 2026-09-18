@@ -11,7 +11,7 @@
 
 import { useState } from 'react';
 import type { Decision } from '@/lib/types';
-import { humaniseGate } from '@/lib/format';
+import { gateLabel } from '@/lib/format';
 import { Pill } from './Chrome';
 import { Bar } from './ui';
 
@@ -58,7 +58,7 @@ export function DecisionTrace({ decision }: { decision: Decision }) {
                 </span>
                 <span className="min-w-0">
                   <span className={gate.passed ? 'text-muted' : 'font-medium text-body'}>
-                    {humaniseGate(gate.id)}
+                    {gateLabel(gate.id)}
                   </span>
                   <span className="block text-faint">{gate.detail}</span>
                 </span>
@@ -114,7 +114,7 @@ export function DecisionTrace({ decision }: { decision: Decision }) {
       <div className="space-y-2 border-t border-line p-3">
         {failed ? (
           <div className="flex flex-wrap items-center gap-2">
-            <Pill tone="bad">Blocked by {humaniseGate(failed.id)}</Pill>
+            <Pill tone="bad">Blocked by {gateLabel(failed.id).toLowerCase()}</Pill>
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-2">

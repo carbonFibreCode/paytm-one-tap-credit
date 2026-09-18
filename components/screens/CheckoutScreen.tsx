@@ -16,7 +16,7 @@ import { AnimatePresence } from 'framer-motion';
 import { BadgeCheck, ChevronRight } from 'lucide-react';
 import type { Instrument } from '@/lib/types';
 import { useApp } from '@/lib/client/state';
-import { amountInWords, formatINR, humaniseGate } from '@/lib/format';
+import { amountInWords, formatINR, gateReason } from '@/lib/format';
 import { personOrDefault } from '@/lib/fixtures/people';
 import { AppBar, Monogram, Pill } from '../Chrome';
 import { NudgeCard } from '../NudgeCard';
@@ -46,6 +46,7 @@ export function CheckoutScreen() {
     go,
     toggleDrawer,
     userId,
+    explainMode,
   } = useApp();
 
   const person = personOrDefault(userId);
@@ -77,13 +78,15 @@ export function CheckoutScreen() {
         title="Payment"
         onBack={() => go('home')}
         right={
-          <button
-            type="button"
-            onClick={() => toggleDrawer(true)}
-            className="rounded-lg border border-line px-2 py-1 text-[10px] font-medium text-muted transition hover:text-body"
-          >
-            Demo
-          </button>
+          explainMode ? (
+            <button
+              type="button"
+              onClick={() => toggleDrawer(true)}
+              className="rounded-lg border border-line px-2 py-1 text-[10px] font-medium text-muted transition hover:text-body"
+            >
+              Demo
+            </button>
+          ) : null
         }
       />
 
@@ -118,7 +121,7 @@ export function CheckoutScreen() {
                 onAccept={acceptNudge}
                 onDecline={declineNudge}
               />
-            ) : decision && !decision.showNudge && !decisionLoading ? (
+            ) : explainMode && decision && !decision.showNudge && !decisionLoading ? (
               <EngineStrip key="engine" />
             ) : null}
           </AnimatePresence>
@@ -173,7 +176,11 @@ export function CheckoutScreen() {
   );
 }
 
-/** Visible proof that the engine ran and chose silence. */
+/**
+ * Visible proof that the engine ran and chose silence \u2014 instrumentation, not
+ * product. In production a withheld decision shows nothing at all, so this is
+ * behind the explain view.
+ */
 function EngineStrip() {
   const { decision, clearHistory, toggleTrace } = useApp();
   if (!decision) return null;
@@ -189,7 +196,7 @@ function EngineStrip() {
         className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
       >
         <span className="min-w-0 flex-1 truncate text-[11px] text-muted">
-          No nudge · {decision.blockedBy ? humaniseGate(decision.blockedBy) : 'below threshold'}
+          No nudge · {gateReason(decision.blockedBy ?? 'SCORE_THRESHOLD')}
         </span>
         <ChevronRight size={14} className="shrink-0 text-faint" />
       </button>

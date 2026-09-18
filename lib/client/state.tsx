@@ -63,6 +63,7 @@ interface Store extends State {
   toggleDrawer: (open?: boolean) => void;
   toggleInfo: (open?: boolean) => void;
   toggleTrace: (open?: boolean) => void;
+  toggleExplain: (on?: boolean) => void;
   acceptNudge: () => void;
   declineNudge: () => void;
   payNormally: () => void;
@@ -293,6 +294,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toggleDrawer: (open) => dispatch({ type: 'toggleDrawer', open }),
       toggleInfo: (open) => dispatch({ type: 'toggleInfo', open }),
       toggleTrace: (open) => dispatch({ type: 'toggleTrace', open }),
+      toggleExplain: (on) => dispatch({ type: 'toggleExplain', on }),
 
       acceptNudge: () => {
         recordOutcome('accepted');

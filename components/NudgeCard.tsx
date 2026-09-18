@@ -36,7 +36,7 @@ export function NudgeCard({
   onAccept: () => void;
   onDecline: () => void;
 }) {
-  const { toggleTrace } = useApp();
+  const { toggleTrace, explainMode } = useApp();
   const offer = decision.offer;
   if (!offer) return null;
 
@@ -94,13 +94,13 @@ export function NudgeCard({
         >
           Why am I seeing this?
         </button>
-        {copy ? <CopySource copy={copy} /> : null}
+        {explainMode && copy ? <CopySource copy={copy} /> : null}
       </div>
     </motion.div>
   );
 }
 
-/** Where the copy came from — useful in the demo, honest in principle. */
+/** Where the copy came from — useful in the demo, hidden in production view. */
 function CopySource({ copy }: { copy: NudgeCopy }) {
   const isLive = copy.source === 'sarvam';
   return (

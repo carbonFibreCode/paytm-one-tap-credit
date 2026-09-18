@@ -13,7 +13,7 @@ import { X } from 'lucide-react';
 import type { Decision } from '@/lib/types';
 import { useApp } from '@/lib/client/state';
 import { weakestSignal } from '@/lib/engine/explain';
-import { humaniseGate } from '@/lib/format';
+import { gateReason } from '@/lib/format';
 import { DecisionTrace } from './DecisionTrace';
 import { Sheet } from './Sheet';
 import { Pill } from './Chrome';
@@ -36,10 +36,10 @@ export function DecisionSheet() {
                 <Pill tone={decision.showNudge ? 'good' : 'bad'}>
                   {decision.showNudge ? 'Offer shown' : 'No nudge'}
                 </Pill>
-                <span className="truncate text-[12px] font-semibold text-body">
+                <span className="truncate text-[12px] font-semibold text-body first-letter:uppercase">
                   {decision.showNudge
                     ? 'All checks passed'
-                    : humaniseGate(decision.blockedBy ?? 'SCORE_THRESHOLD')}
+                    : gateReason(decision.blockedBy ?? 'SCORE_THRESHOLD')}
                 </span>
               </span>
             </div>
