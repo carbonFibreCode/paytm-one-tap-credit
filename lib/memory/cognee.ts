@@ -21,6 +21,7 @@
  */
 
 import type { MemoryContext } from '../engine/score';
+import { errorInfo, log } from '../log';
 import { readRecords, type AuditRecord } from '../audit/store';
 
 /** Per-tenant base URL, copied from the API Keys page in Cognee Cloud. */
@@ -180,8 +181,10 @@ async function refreshFromCognee(userId: string): Promise<void> {
         source: 'cognee',
       },
     });
-  } catch {
-    // Memory is an enhancement, never a dependency of the decision path.
+  } catch (error) {
+    // Memory is an enhancement, never a dependency of the decision path — but
+    // a graph that has quietly stopped answering is worth knowing about.
+    log.warn({ event: 'cognee.refresh_failed', userId, ...errorInfo(error) });
   } finally {
     inFlight.delete(userId);
   }

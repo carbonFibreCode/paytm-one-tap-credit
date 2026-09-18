@@ -15,6 +15,7 @@
 
 import type { Language } from '../types';
 import { formatINR } from '../format';
+import { log } from '../log';
 import { renderTemplate, type NudgeContext } from './templates';
 
 const TIMEOUT_MS = 2_500;
@@ -243,6 +244,12 @@ export async function generateNudgeText(context: NudgeContext): Promise<NudgeTex
 
     const validation = validateNudgeText(generated, context);
     if (!validation.ok) {
+      log.warn({
+        event: 'sarvam.rejected',
+        reason: validation.reason,
+        language: context.language,
+        latencyMs,
+      });
       return {
         text: fallback(),
         source: 'template',
@@ -255,10 +262,11 @@ export async function generateNudgeText(context: NudgeContext): Promise<NudgeTex
     return { text: generated, source: 'sarvam', latencyMs };
   } catch (error) {
     const latencyMs = Date.now() - startedAt;
-    const reason =
-      error instanceof Error && error.name === 'AbortError'
-        ? `Sarvam timed out after ${TIMEOUT_MS}ms`
-        : `Sarvam call failed — ${error instanceof Error ? error.message : String(error)}`;
+    const timedOut = error instanceof Error && error.name === 'AbortError';
+    const reason = timedOut
+      ? `Sarvam timed out after ${TIMEOUT_MS}ms`
+      : `Sarvam call failed — ${error instanceof Error ? error.message : String(error)}`;
+    log.warn({ event: 'sarvam.failed', timedOut, reason, latencyMs });
     return { text: fallback(), source: 'template', reason, latencyMs };
   }
 }

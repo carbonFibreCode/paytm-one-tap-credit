@@ -30,6 +30,7 @@ import {
   payments,
 } from '../db/schema';
 import { buildSchedule } from '../engine/emi';
+import { errorInfo, log } from '../log';
 import { NO_LIVE_CREDIT } from '../personas';
 import type { EmiOption, LiveCredit, ProductId, RecurringObligation } from '../types';
 
@@ -186,7 +187,9 @@ export async function liveCreditOrEmpty(userId: string): Promise<LiveCredit> {
   try {
     return await liveCredit(userId);
   } catch (error) {
-    console.warn('[credit] live read failed, assuming none:', (error as Error).message);
+    // The decision proceeds on seed-derived capacity, exactly as it did before
+    // the credit ledger existed.
+    log.warn({ event: 'credit.read_failed', userId, ...errorInfo(error) });
     return NO_LIVE_CREDIT;
   }
 }

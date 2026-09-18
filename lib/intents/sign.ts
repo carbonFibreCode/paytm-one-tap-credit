@@ -12,6 +12,7 @@
  */
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { log } from '../log';
 import { unsignedPortion } from '../upi';
 
 const DEV_SECRET = 'one-tap-credit-development-signing-key';
@@ -23,7 +24,7 @@ function secret(): string {
   if (configured) return configured;
   if (!warned) {
     warned = true;
-    console.warn('[intents] QR_SIGNING_SECRET is not set — signing with the development key');
+    log.warn({ event: 'signing.dev_key' }, 'QR_SIGNING_SECRET is not set — using the development key');
   }
   return DEV_SECRET;
 }

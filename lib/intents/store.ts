@@ -19,6 +19,7 @@ import { db, withTimeout } from '../db/client';
 import { insertIntentSchema, paymentIntents, type IntentRow } from '../db/schema';
 import { getMerchant, MERCHANTS, type Merchant } from '../merchants';
 import { buildUpiPayload, handleFor, merchantCategoryCode, parseUpiPayload, upiVpa } from '../upi';
+import { log } from '../log';
 import { signIntent, verifyIntent } from './sign';
 
 /** How long a bill's QR stays payable. */
@@ -147,7 +148,9 @@ const REFUSALS: Record<ScanRefusal, { status: number; message: string }> = {
   paid: { status: 409, message: 'This bill has already been paid.' },
 };
 
-function refuse(reason: ScanRefusal): ScanResult {
+function refuse(reason: ScanRefusal, ref?: string): ScanResult {
+  // A refusal is the security control working; it should be visible.
+  log.info({ event: 'intent.refused', reason, ref });
   return { ok: false, reason, ...REFUSALS[reason] };
 }
 
@@ -155,15 +158,15 @@ function refuse(reason: ScanRefusal): ScanResult {
 export async function scanIntent(payload: string, now = new Date().toISOString()): Promise<ScanResult> {
   const parsed = parseUpiPayload(payload);
   if (!parsed?.tr) return refuse('unsigned');
-  if (!verifyIntent(payload)) return refuse('tampered');
+  if (!verifyIntent(payload)) return refuse('tampered', parsed.tr);
 
   const row = await findIntent(parsed.tr);
-  if (!row) return refuse('unknown');
-  if (row.payload !== payload) return refuse('mismatch');
+  if (!row) return refuse('unknown', parsed.tr);
+  if (row.payload !== payload) return refuse('mismatch', parsed.tr);
 
   const state = intentState(row, now);
-  if (state === 'expired') return refuse('expired');
-  if (state === 'paid') return refuse('paid');
+  if (state === 'expired') return refuse('expired', row.ref);
+  if (state === 'paid') return refuse('paid', row.ref);
 
   if (state === 'created') {
     await withTimeout(

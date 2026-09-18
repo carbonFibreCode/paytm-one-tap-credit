@@ -22,6 +22,7 @@ import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { DecisionTrace } from '../types';
 import { round } from '../math';
+import { errorInfo, log } from '../log';
 import { dbConfigured } from '../db/client';
 import { insertRecord, readRecordsFromDb } from './db';
 
@@ -78,7 +79,7 @@ async function appendToDb(record: AuditRecord): Promise<void> {
     await insertRecord(record);
   } catch (error) {
     // Logging is a side-effect. Report it, keep the file copy, never rethrow.
-    console.warn('[audit] database write failed:', (error as Error).message);
+    log.warn({ event: 'db.write_failed', type: record.type, ...errorInfo(error) });
   }
 }
 
@@ -100,8 +101,8 @@ export async function readRecords(): Promise<AuditRecord[]> {
       lastBackend = 'database';
       return records;
     } catch (error) {
-      console.warn('[audit] database read failed, using local trail:', (error as Error).message);
       lastBackend = fileWritable ? 'file' : 'memory';
+      log.warn({ event: 'db.read_failed', fallback: lastBackend, ...errorInfo(error) });
     }
   }
 

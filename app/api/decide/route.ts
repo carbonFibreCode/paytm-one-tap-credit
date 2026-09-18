@@ -13,8 +13,10 @@ import { buildProfile, getPersona } from '@/lib/personas';
 import { decideBody, resolveDecideRequest } from '@/lib/api/schemas';
 import { jsonRoute } from '@/lib/api/route';
 import { liveCreditOrEmpty } from '@/lib/credit/store';
+import { requestLog } from '@/lib/log';
 
-export const POST = jsonRoute(decideBody, async (body) => {
+export const POST = jsonRoute(decideBody, async (body, _context, request) => {
+  const startedAt = Date.now();
   const { request: decisionRequest, merchantCreditEnabled } = resolveDecideRequest(
     body,
     new Date().toISOString(),
@@ -27,6 +29,19 @@ export const POST = jsonRoute(decideBody, async (body) => {
   const profile = buildProfile(persona, decisionRequest.timestamp, live);
 
   const decision = decide({ request: decisionRequest, profile, merchantCreditEnabled });
+
+  requestLog(request).info({
+    event: 'decision.served',
+    userId: decisionRequest.userId,
+    merchantId: decisionRequest.merchantId,
+    amount: decisionRequest.amount,
+    showNudge: decision.showNudge,
+    product: decision.product,
+    score: decision.score,
+    blockedBy: decision.blockedBy,
+    liveObligations: live.obligations.length,
+    latencyMs: Date.now() - startedAt,
+  });
 
   return NextResponse.json({
     ...decision,
