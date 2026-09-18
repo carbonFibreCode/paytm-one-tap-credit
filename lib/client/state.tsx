@@ -284,7 +284,7 @@ interface Store extends State {
   payments: PaymentRecord[];
   n8nAvailable: boolean;
   go: (screen: Screen) => void;
-  selectMerchant: (merchantId: string) => void;
+  selectMerchant: (merchantId: string, amount?: number) => void;
   setAmount: (amount: number) => void;
   setInstrument: (instrument: Instrument) => void;
   setUser: (userId: string) => void;
@@ -493,10 +493,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       n8nAvailable: n8nConfigured(),
 
       go: (next) => dispatch({ type: 'go', screen: next }),
-      selectMerchant: (id) => {
+      selectMerchant: (id, amount) => {
         const target = getMerchant(id);
         if (!target) return;
-        dispatch({ type: 'selectMerchant', merchantId: id, amount: target.suggestedAmount });
+        // A scanned QR can carry its own amount; otherwise use the merchant's.
+        dispatch({
+          type: 'selectMerchant',
+          merchantId: id,
+          amount: amount && amount > 0 ? Math.round(amount) : target.suggestedAmount,
+        });
       },
       setAmount: (next) => dispatch({ type: 'setAmount', amount: Math.max(0, Math.round(next)) }),
       setInstrument: (next) => dispatch({ type: 'setInstrument', instrument: next }),

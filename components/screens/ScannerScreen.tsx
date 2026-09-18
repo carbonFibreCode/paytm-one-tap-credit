@@ -19,6 +19,7 @@ import { Camera, CameraOff, ChevronLeft, Images, Zap } from 'lucide-react';
 import { MERCHANTS } from '@/lib/merchants';
 import { useApp } from '@/lib/client/state';
 import { formatINR } from '@/lib/format';
+import { parseUpiPayload } from '@/lib/upi';
 import { Monogram } from '../Chrome';
 import { BottomNav } from '../BottomNav';
 
@@ -39,10 +40,10 @@ export function ScannerScreen() {
   const lockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const lockOn = useCallback(
-    (merchantId: string) => {
+    (merchantId: string, amount?: number) => {
       setLocked((current) => {
         if (current) return current;
-        lockTimer.current = setTimeout(() => selectMerchant(merchantId), LOCK_ON_MS);
+        lockTimer.current = setTimeout(() => selectMerchant(merchantId, amount), LOCK_ON_MS);
         return merchantId;
       });
     },
@@ -106,8 +107,8 @@ export function ScannerScreen() {
         const codes = await detector.detect(video);
         const value = codes[0]?.rawValue;
         if (!value) return;
-        const matched = matchMerchant(value);
-        if (matched) lockOn(matched);
+        const scanned = parseUpiPayload(value);
+        if (scanned) lockOn(scanned.merchantId, scanned.amount);
       } catch {
         // A single failed frame is not worth reporting.
       }
@@ -248,20 +249,4 @@ export function ScannerScreen() {
       <BottomNav active="scanner" />
     </div>
   );
-}
-
-/**
- * Map a scanned QR payload onto one of our merchants.
- *
- * Handles a UPI intent string (`upi://pay?pa=…&pn=Kroma Electronics`) as well as
- * plain text, and falls back to the headline merchant so a real-world QR still
- * demonstrates the flow rather than dead-ending.
- */
-function matchMerchant(raw: string): string | null {
-  const text = raw.toLowerCase();
-  const byName = MERCHANTS.find((merchant) => text.includes(merchant.name.toLowerCase()));
-  if (byName) return byName.id;
-  const byId = MERCHANTS.find((merchant) => text.includes(merchant.id));
-  if (byId) return byId.id;
-  return text.startsWith('upi://') ? MERCHANTS[0].id : null;
 }
