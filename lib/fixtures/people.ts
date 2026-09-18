@@ -13,6 +13,14 @@ export interface Person {
   userId: string;
   displayName: string;
   initials: string;
+  /**
+   * Every persona is English for the demo. Sarvam can write the nudge in any of
+   * the supported languages, but the app chrome around it is English only \u2014 and
+   * a Hindi nudge sitting inside an English checkout reads as a bug, not as
+   * personalisation. Real localisation moves the whole UI, not one card. The
+   * other languages are still one tap away in the demo drawer, where switching
+   * them is deliberate and can be narrated.
+   */
   preferredLanguage: Language;
   /** Paytm wallet balance. UPI draws from the linked bank, not from this. */
   balance: number;
@@ -30,7 +38,7 @@ export const PEOPLE: Person[] = [
     userId: 'u_rohit',
     displayName: 'Rohit Sharma',
     initials: 'RS',
-    preferredLanguage: 'hi',
+    preferredLanguage: 'en',
     balance: 12_480,
     bankName: 'HDFC Bank',
     bankLast4: '4821',
@@ -54,7 +62,7 @@ export const PEOPLE: Person[] = [
     userId: 'u_aman',
     displayName: 'Aman Verma',
     initials: 'AV',
-    preferredLanguage: 'hi',
+    preferredLanguage: 'en',
     balance: 4_110,
     bankName: 'Kotak Bank',
     bankLast4: '9014',
@@ -78,7 +86,7 @@ export const PEOPLE: Person[] = [
     userId: 'u_meera',
     displayName: 'Meera Iyer',
     initials: 'MI',
-    preferredLanguage: 'ta',
+    preferredLanguage: 'en',
     balance: 15_320,
     bankName: 'HDFC Bank',
     bankLast4: '2288',
@@ -90,7 +98,7 @@ export const PEOPLE: Person[] = [
     userId: 'u_vikram',
     displayName: 'Vikram Singh',
     initials: 'VS',
-    preferredLanguage: 'bn',
+    preferredLanguage: 'en',
     balance: 9_870,
     bankName: 'SBI',
     bankLast4: '6130',
