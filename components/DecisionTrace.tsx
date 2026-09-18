@@ -20,7 +20,7 @@ export function DecisionTrace({ decision }: { decision: Decision }) {
   const failed = decision.trace.gates.find((gate) => !gate.passed);
 
   return (
-    <div className="rounded-2xl border border-line bg-ink/60 text-[11px]">
+    <div className="rounded-2xl border border-line bg-ink/40 text-[11px]">
       <div className="flex gap-1 border-b border-line p-1">
         {(
           [
@@ -42,7 +42,7 @@ export function DecisionTrace({ decision }: { decision: Decision }) {
         ))}
       </div>
 
-      <div className="scroll-slim max-h-56 overflow-y-auto p-3">
+      <div className="p-3">
         {tab === 'checks' ? (
           <ul className="space-y-2">
             {decision.trace.gates.map((gate) => (

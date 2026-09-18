@@ -43,9 +43,18 @@ function rupees(value: number): string {
   return `₹${Math.round(value).toLocaleString('en-IN')}`;
 }
 
-export function decide({ request, profile, merchantCreditEnabled }: DecideInput): Decision {
+/**
+ * Assemble everything the gates need to judge a transaction.
+ *
+ * Exported because the engine is also exposed as individual stages over HTTP,
+ * so an n8n workflow can run gates, scoring and offer construction as separate
+ * visible steps. Both paths build the context the same way, here, once.
+ */
+export function buildGateContext({ request, profile, merchantCreditEnabled }: DecideInput): {
+  context: GateContext;
+  tenuresByProduct: Map<string, EmiOption[]>;
+} {
   const { amount, merchantCategory, timestamp } = request;
-  const nudgeHistory = request.nudgeHistory ?? [];
 
   // --- what could fund this purchase at all ---
   const eligibleProducts = profile.products.filter((product) => product.eligible);
@@ -65,18 +74,29 @@ export function decide({ request, profile, merchantCreditEnabled }: DecideInput)
     Number.POSITIVE_INFINITY,
   );
 
-  const context: GateContext = {
-    amount,
-    category: merchantCategory,
-    merchantCreditEnabled,
-    timestamp,
-    profile,
-    nudgeHistory,
-    selectedInstrument: request.selectedInstrument,
-    eligibleProducts,
-    fundingProducts,
-    minAchievableEmi,
+  return {
+    tenuresByProduct,
+    context: {
+      amount,
+      category: merchantCategory,
+      merchantCreditEnabled,
+      timestamp,
+      profile,
+      nudgeHistory: request.nudgeHistory ?? [],
+      selectedInstrument: request.selectedInstrument,
+      eligibleProducts,
+      fundingProducts,
+      minAchievableEmi,
+    },
   };
+}
+
+export function decide(input: DecideInput): Decision {
+  const { request, profile } = input;
+  const { amount, merchantCategory } = request;
+
+  const { context, tenuresByProduct } = buildGateContext(input);
+  const { eligibleProducts, fundingProducts } = context;
 
   const { results: gates, blockedBy, blockedReason } = runGates(context);
 

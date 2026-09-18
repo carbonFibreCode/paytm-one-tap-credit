@@ -1,0 +1,175 @@
+{
+  "name": "4 · Daily funnel digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "44444444-0000-4000-8000-000000000001",
+      "name": "Every morning at 9am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3111/api/audit",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "summary",
+              "value": "true"
+            },
+            {
+              "name": "sinceDays",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "id": "44444444-0000-4000-8000-000000000002",
+      "name": "Read the audit trail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -160,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 500
+    },
+    {
+      "parameters": {
+        "jsCode": "// Turn the funnel into something a person can read over coffee.\n// Every number here comes from decisions this system actually made — no\n// assumptions, which is the same standard the pitch deck's projection slide\n// holds itself to.\nconst s = $input.first().json;\nconst rupee = (n) => '₹' + Number(n).toLocaleString('en-IN');\nconst date = new Date().toISOString().slice(0, 10);\n\nconst gates = s.withheldByGate.length\n  ? s.withheldByGate.map((g) => `| ${g.gate} | ${g.count} |`).join('\\n')\n  : '| _none_ | 0 |';\n\nconst products = s.byProduct.length\n  ? s.byProduct.map((p) => `| ${p.product} | ${p.count} |`).join('\\n')\n  : '| _none_ | 0 |';\n\nconst markdown = `# One-Tap Credit — daily digest\n_${date} · last ${s.sinceDays} day(s) · generated ${s.generatedAt}_\n\n## Funnel\n| Step | Count |\n| --- | --- |\n| Transactions assessed | ${s.totals.transactions} |\n| Nudges shown | ${s.totals.nudged} |\n| Withheld | ${s.totals.withheld} |\n| Accepted | ${s.totals.accepted} |\n| Declined | ${s.totals.declined} |\n\n**Nudge rate** ${s.nudgeRate}% · **Acceptance rate** ${s.acceptanceRate}%\nAverage relevance ${s.averages.score}/100 · average eligibility signal ${s.averages.eligibilitySignal}/100\n\n## Why offers were withheld\n| Gate | Count |\n| --- | --- |\n${gates}\n\n## Product mix\n| Product | Count |\n| --- | --- |\n${products}\n\n---\nThe engine withheld an offer ${s.totals.withheld} of ${s.totals.transactions} times.\nRestraint is the product working, not the product failing.\n`;\n\nreturn [{ json: { markdown, fileName: `digest-${date}.md` } }];"
+      },
+      "id": "44444444-0000-4000-8000-000000000003",
+      "name": "Format digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        60,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "markdown",
+        "options": {
+          "fileName": "={{ $json.fileName }}"
+        }
+      },
+      "id": "44444444-0000-4000-8000-000000000004",
+      "name": "Convert to file",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        280,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ '.data/' + $('Format digest').first().json.fileName }}",
+        "options": {}
+      },
+      "id": "44444444-0000-4000-8000-000000000005",
+      "name": "Write digest to disk",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "44444444-0000-4000-8000-00000000000f",
+      "name": "Run now (manual)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -380,
+        460
+      ]
+    }
+  ],
+  "connections": {
+    "Every morning at 9am": {
+      "main": [
+        [
+          {
+            "node": "Read the audit trail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the audit trail": {
+      "main": [
+        [
+          {
+            "node": "Format digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format digest": {
+      "main": [
+        [
+          {
+            "node": "Convert to file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to file": {
+      "main": [
+        [
+          {
+            "node": "Write digest to disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run now (manual)": {
+      "main": [
+        [
+          {
+            "node": "Read the audit trail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "id": "otcDigest0000001",
+  "active": false
+}

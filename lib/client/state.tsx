@@ -23,22 +23,26 @@ import {
 } from 'react';
 import type { Decision, EmiOption, Instrument, Language, NudgeHistoryEntry } from '../types';
 import { getMerchant, MERCHANTS } from '../merchants';
+import { personOrDefault } from '../people';
 import {
   n8nConfigured,
   requestDecision,
+  reportOutcome,
   requestNudgeText,
   type OrchestrationMode,
   type ServedBy,
 } from './api';
 
-const HISTORY_KEY = 'otc.nudge-history.v1';
+// Bumping this version drops any history stored under the previous key, which
+// is how we clear stale demo state left over from an earlier session.
+const HISTORY_KEY = 'otc.nudge-history.v2';
 
-export type Screen = 'home' | 'checkout' | 'approved' | 'success';
+export type Screen = 'persona' | 'home' | 'scanner' | 'checkout' | 'approved' | 'success';
 
 export interface PaymentRecord {
   amount: number;
   merchantName: string;
-  method: 'upi' | 'postpaid' | 'card';
+  method: 'upi' | 'wallet' | 'postpaid' | 'card';
   partner?: string;
   tenure?: EmiOption;
 }
@@ -78,6 +82,8 @@ interface State {
   mode: OrchestrationMode;
   languageOverride: Language | null;
   drawerOpen: boolean;
+  infoOpen: boolean;
+  traceOpen: boolean;
   historyByUser: Record<string, NudgeHistoryEntry[]>;
   historyLoaded: boolean;
 }
@@ -98,6 +104,8 @@ type Action =
   | { type: 'setMode'; mode: OrchestrationMode }
   | { type: 'setLanguage'; language: Language | null }
   | { type: 'toggleDrawer'; open?: boolean }
+  | { type: 'toggleInfo'; open?: boolean }
+  | { type: 'toggleTrace'; open?: boolean }
   | { type: 'historyLoaded'; history: Record<string, NudgeHistoryEntry[]> }
   | { type: 'recordOutcome'; userId: string; entry: NudgeHistoryEntry }
   | { type: 'clearHistory'; userId: string };
@@ -105,7 +113,7 @@ type Action =
 const DEFAULT_MERCHANT = MERCHANTS[0];
 
 const initialState: State = {
-  screen: 'home',
+  screen: 'persona',
   userId: 'u_rohit',
   merchantId: DEFAULT_MERCHANT.id,
   amount: DEFAULT_MERCHANT.suggestedAmount,
@@ -121,6 +129,8 @@ const initialState: State = {
   mode: 'orchestrated',
   languageOverride: null,
   drawerOpen: false,
+  infoOpen: false,
+  traceOpen: false,
   historyByUser: {},
   historyLoaded: false,
 };
@@ -134,13 +144,14 @@ function clearDecision(state: State): State {
     decisionError: null,
     nudgeCopy: null,
     nudgeDismissed: false,
+    traceOpen: false,
   };
 }
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'go':
-      return { ...state, screen: action.screen, drawerOpen: false };
+      return { ...state, screen: action.screen, drawerOpen: false, infoOpen: false, traceOpen: false };
 
     case 'selectMerchant':
       return {
@@ -158,7 +169,13 @@ function reducer(state: State, action: Action): State {
       return { ...clearDecision(state), instrument: action.instrument };
 
     case 'setUser':
-      return { ...clearDecision(state), userId: action.userId };
+      // Landing back on home avoids showing one person's checkout to another.
+      return {
+        ...clearDecision(state),
+        userId: action.userId,
+        screen: state.screen === 'persona' ? 'home' : state.screen,
+        drawerOpen: false,
+      };
 
     case 'decisionStart':
       return { ...state, decisionLoading: true, decisionError: null };
@@ -197,6 +214,12 @@ function reducer(state: State, action: Action): State {
     case 'toggleDrawer':
       return { ...state, drawerOpen: action.open ?? !state.drawerOpen };
 
+    case 'toggleInfo':
+      return { ...state, infoOpen: action.open ?? !state.infoOpen };
+
+    case 'toggleTrace':
+      return { ...state, traceOpen: action.open ?? !state.traceOpen };
+
     case 'historyLoaded':
       return { ...state, historyByUser: action.history, historyLoaded: true };
 
@@ -231,6 +254,8 @@ interface Store extends State {
   setMode: (mode: OrchestrationMode) => void;
   setLanguage: (language: Language | null) => void;
   toggleDrawer: (open?: boolean) => void;
+  toggleInfo: (open?: boolean) => void;
+  toggleTrace: (open?: boolean) => void;
   acceptNudge: () => void;
   declineNudge: () => void;
   payNormally: () => void;
@@ -273,7 +298,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   // --- decisioning ---------------------------------------------------------
 
   const { screen, userId, merchantId, amount, instrument, mode, historyLoaded } = state;
-  const needsDecision = screen === 'checkout' && historyLoaded;
+  // A zero amount is not a transaction — the keypad passes through it on the
+  // way down, and asking the engine to judge it would only produce a 400.
+  const needsDecision = screen === 'checkout' && historyLoaded && amount > 0;
 
   useEffect(() => {
     if (!needsDecision) return;
@@ -345,7 +372,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       months: headline.months,
       emi: headline.emi,
       noCost: headline.noCost,
-      language: languageOverride ?? inferLanguage(userId),
+      language: languageOverride ?? personOrDefault(userId).preferredLanguage,
     })
       .then((result) => {
         if (cancelled) return;
@@ -390,8 +417,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         userId: state.userId,
         entry: { product, decidedAt: new Date().toISOString(), outcome },
       });
+      reportOutcome({
+        transactionId: state.decision?.transactionId ?? 'unknown',
+        userId: state.userId,
+        product,
+        outcome,
+      });
     },
-    [state.decision?.product, state.userId],
+    [state.decision?.product, state.decision?.transactionId, state.userId],
   );
 
   const value = useMemo<Store>(() => {
@@ -415,6 +448,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setMode: (next) => dispatch({ type: 'setMode', mode: next }),
       setLanguage: (next) => dispatch({ type: 'setLanguage', language: next }),
       toggleDrawer: (open) => dispatch({ type: 'toggleDrawer', open }),
+      toggleInfo: (open) => dispatch({ type: 'toggleInfo', open }),
+      toggleTrace: (open) => dispatch({ type: 'toggleTrace', open }),
 
       acceptNudge: () => {
         recordOutcome('accepted');
@@ -430,7 +465,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           payment: {
             amount: state.amount,
             merchantName: merchant?.name ?? 'Merchant',
-            method: 'upi',
+            method: state.instrument === 'wallet' ? 'wallet' : 'upi',
           },
         });
       },
@@ -460,17 +495,4 @@ export function useApp(): Store {
   const store = useContext(StoreContext);
   if (!store) throw new Error('useApp must be used inside <AppStateProvider>');
   return store;
-}
-
-/** Each persona has a preferred language; the drawer can override it. */
-function inferLanguage(userId: string): Language {
-  const languages: Record<string, Language> = {
-    u_rohit: 'hi',
-    u_priya: 'en',
-    u_aman: 'hi',
-    u_deepak: 'en',
-    u_meera: 'ta',
-    u_vikram: 'bn',
-  };
-  return languages[userId] ?? 'en';
 }

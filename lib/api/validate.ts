@@ -24,7 +24,7 @@ const CATEGORIES = [
 
 const category = z.enum(CATEGORIES);
 const language = z.enum(['en', 'hi', 'ta', 'bn']);
-const instrument = z.enum(['upi', 'debit_card', 'credit_card', 'postpaid', 'netbanking']);
+const instrument = z.enum(['upi', 'wallet', 'debit_card', 'credit_card', 'postpaid', 'netbanking']);
 
 /** ₹1 crore — beyond any plausible checkout. */
 const MAX_SAFE_AMOUNT = 1_00_00_000;

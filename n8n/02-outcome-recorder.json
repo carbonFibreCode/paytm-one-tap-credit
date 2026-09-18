@@ -1,0 +1,123 @@
+{
+  "name": "2 · Outcome recorder (audit + Cognee memory)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "one-tap-credit-outcome",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "22222222-0000-4000-8000-000000000001",
+      "name": "Nudge outcome",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -300,
+        300
+      ],
+      "webhookId": "22222222-0000-4000-8000-000000000001"
+    },
+    {
+      "parameters": {
+        "jsCode": "// The app reports what the user did with an offer. Normalise it before it\n// reaches the trail, so a malformed call cannot corrupt the digest.\nconst body = $input.first().json.body ?? {};\nconst allowed = ['shown', 'accepted', 'declined'];\n\nif (!allowed.includes(body.outcome)) {\n  throw new Error(`outcome must be one of ${allowed.join(', ')}`);\n}\n\nreturn [\n  {\n    json: {\n      type: 'outcome',\n      transactionId: String(body.transactionId ?? 'unknown'),\n      userId: String(body.userId ?? 'unknown'),\n      product: body.product ?? null,\n      merchantCategory: body.merchantCategory ?? undefined,\n      outcome: body.outcome,\n      at: body.at ?? new Date().toISOString(),\n    },\n  },\n];"
+      },
+      "id": "22222222-0000-4000-8000-000000000002",
+      "name": "Validate outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3111/api/audit",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "22222222-0000-4000-8000-000000000003",
+      "name": "Append to trail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        140,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 500
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3111/api/memory/remember",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('Validate outcome').first().json) }}",
+        "options": {
+          "timeout": 6000
+        }
+      },
+      "id": "22222222-0000-4000-8000-000000000004",
+      "name": "Remember in Cognee",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        360,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 500
+    }
+  ],
+  "connections": {
+    "Nudge outcome": {
+      "main": [
+        [
+          {
+            "node": "Validate outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate outcome": {
+      "main": [
+        [
+          {
+            "node": "Append to trail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to trail": {
+      "main": [
+        [
+          {
+            "node": "Remember in Cognee",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "id": "otcOutcome000001",
+  "active": true
+}

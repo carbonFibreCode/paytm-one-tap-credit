@@ -14,32 +14,14 @@
  */
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useState } from 'react';
-import type { Language, LedgerEntry, SignalComponent } from '@/lib/types';
+import type { Language } from '@/lib/types';
 import { useApp } from '@/lib/client/state';
+import { useProfile, type ProfilePayload } from '@/lib/client/useProfile';
 import { MERCHANTS } from '@/lib/merchants';
+import { PEOPLE } from '@/lib/people';
 import { LANGUAGE_NAMES } from '@/lib/nudge/templates';
 import { formatINR, formatShortDate } from '@/lib/format';
 import { Pill } from './Chrome';
-
-interface ProfilePayload {
-  displayName: string;
-  tagline: string;
-  demonstrates: string;
-  eligibilitySignal: number;
-  eligibilityBreakdown: SignalComponent[];
-  features: {
-    accountAgeDays: number;
-    txnCount: number;
-    avgMonthlyInflow: number;
-    fixedMonthlyOutflow: number;
-    affordabilityCapacity: number;
-    detectedObligations: Array<{ merchant: string; amount: number; occurrences: number }>;
-  };
-  ledger: { total: number; recent: LedgerEntry[] };
-}
-
-const PERSONA_IDS = ['u_rohit', 'u_priya', 'u_aman', 'u_deepak', 'u_meera', 'u_vikram'];
 
 const QUICK_AMOUNTS = [450, 12_000, 50_000, 80_000, 1_20_000, 2_50_000];
 
@@ -65,24 +47,7 @@ export function DemoDrawer() {
     decision,
   } = useApp();
 
-  const [profile, setProfile] = useState<ProfilePayload | null>(null);
-
-  useEffect(() => {
-    if (!drawerOpen) return;
-    let cancelled = false;
-    setProfile(null);
-    fetch(`/api/profile?userId=${encodeURIComponent(userId)}`)
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) => {
-        if (!cancelled) setProfile(data);
-      })
-      .catch(() => {
-        if (!cancelled) setProfile(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [drawerOpen, userId]);
+  const profile = useProfile(userId, drawerOpen);
 
   return (
     <AnimatePresence>
@@ -121,18 +86,18 @@ export function DemoDrawer() {
             <div className="scroll-slim flex-1 space-y-5 overflow-y-auto px-5 pb-6">
               <Section title="Who is paying">
                 <div className="grid grid-cols-2 gap-2">
-                  {PERSONA_IDS.map((id) => (
+                  {PEOPLE.map((person) => (
                     <button
-                      key={id}
+                      key={person.userId}
                       type="button"
-                      onClick={() => setUser(id)}
+                      onClick={() => setUser(person.userId)}
                       className={`rounded-xl border p-2 text-left text-[11px] transition ${
-                        userId === id
+                        userId === person.userId
                           ? 'border-brand/50 bg-brand/10 text-body'
                           : 'border-line bg-elevated text-muted hover:text-body'
                       }`}
                     >
-                      {NAMES[id]}
+                      {person.displayName}
                     </button>
                   ))}
                 </div>
@@ -383,11 +348,3 @@ function daysAgo(days: number): string {
   return new Date(Date.now() - days * 86_400_000).toISOString();
 }
 
-const NAMES: Record<string, string> = {
-  u_rohit: 'Rohit Sharma',
-  u_priya: 'Priya Nair',
-  u_aman: 'Aman Verma',
-  u_deepak: 'Deepak Rao',
-  u_meera: 'Meera Iyer',
-  u_vikram: 'Vikram Singh',
-};

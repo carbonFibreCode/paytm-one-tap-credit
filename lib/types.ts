@@ -30,7 +30,13 @@ export type ProductId = 'postpaid' | 'card';
 
 export type Language = 'hi' | 'en' | 'ta' | 'bn';
 
-export type Instrument = 'upi' | 'debit_card' | 'credit_card' | 'postpaid' | 'netbanking';
+export type Instrument =
+  | 'upi'
+  | 'wallet'
+  | 'debit_card'
+  | 'credit_card'
+  | 'postpaid'
+  | 'netbanking';
 
 // ---------------------------------------------------------------------------
 // Memory layer — the "warm information" the pitch is built on

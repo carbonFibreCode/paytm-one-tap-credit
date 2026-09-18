@@ -10,7 +10,7 @@ export function SuccessScreen() {
   const { payment, go } = useApp();
   if (!payment) return null;
 
-  const paidOnCredit = payment.method !== 'upi';
+  const paidOnCredit = payment.method === 'postpaid' || payment.method === 'card';
 
   return (
     <div className="flex h-full flex-col">
@@ -40,7 +40,7 @@ export function SuccessScreen() {
                 via <span className="font-medium text-brand">{payment.partner}</span>
               </>
             ) : (
-              ' via UPI'
+              ` via ${payment.method === 'wallet' ? 'Paytm Wallet' : 'UPI'}`
             )}
           </motion.p>
         </div>
@@ -96,7 +96,7 @@ export function SuccessScreen() {
             transition={{ delay: 0.55 }}
             className="mt-8 text-center text-[12px] leading-relaxed text-faint"
           >
-            Paid in full from your balance.
+            Paid in full{payment.method === 'wallet' ? ' from your Paytm Balance' : ' from your linked bank account'}.
             <br />
             No credit offer was taken.
           </motion.p>

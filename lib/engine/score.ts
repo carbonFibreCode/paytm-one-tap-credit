@@ -44,16 +44,80 @@ export function amountFit(amount: number): number {
   return clamp(1 - (0.4 * (amount - SWEET_SPOT_HIGH)) / SWEET_SPOT_HIGH, 0.6, 1);
 }
 
+/**
+ * What the memory layer remembers about how this user answers offers.
+ *
+ * Supplied by Cognee in production, or by the local fallback store. It only
+ * ever carries counts and categories — facts, never judgements — because a
+ * fabricated claim must not be able to move a credit decision.
+ */
+export interface MemoryContext {
+  acceptedCount: number;
+  declinedCount: number;
+  declinedCategories: string[];
+  source: string;
+}
+
+export interface MemoryAdjustment {
+  points: number;
+  detail: string;
+}
+
 export interface ScoreResult {
   score: number;
   factors: ScoreFactor[];
+  memoryAdjustment: MemoryAdjustment | null;
   passesThreshold: boolean;
+}
+
+/** Declining here hurts more than declining in general; accepting helps a little. */
+const DECLINED_SAME_CATEGORY = -20;
+const DECLINED_ELSEWHERE = -8;
+const PREVIOUSLY_ACCEPTED = 5;
+
+/**
+ * Turn remembered outcomes into a relevance adjustment.
+ *
+ * Deliberately confined to relevance. Memory can make us *less* likely to
+ * interrupt someone who keeps saying no, but it can never unlock eligibility,
+ * affordability or any other hard gate — those stay deterministic.
+ */
+export function memoryAdjustmentFor(
+  memory: MemoryContext | undefined,
+  category: MerchantCategory,
+): MemoryAdjustment | null {
+  if (!memory) return null;
+
+  if (memory.declinedCategories.includes(category)) {
+    return {
+      points: DECLINED_SAME_CATEGORY,
+      detail: `This user has declined a credit offer on ${category} before — asking again is less welcome here`,
+    };
+  }
+  if (memory.declinedCount > 0) {
+    return {
+      points: DECLINED_ELSEWHERE,
+      detail: `${memory.declinedCount} previous offer${
+        memory.declinedCount === 1 ? '' : 's'
+      } declined in other categories`,
+    };
+  }
+  if (memory.acceptedCount > 0) {
+    return {
+      points: PREVIOUSLY_ACCEPTED,
+      detail: `${memory.acceptedCount} previous offer${
+        memory.acceptedCount === 1 ? '' : 's'
+      } accepted — instalments suit this user`,
+    };
+  }
+  return { points: 0, detail: 'No prior offer outcomes recalled for this user' };
 }
 
 export function scoreTransaction(
   amount: number,
   category: MerchantCategory,
   profile: UserProfile,
+  memory?: MemoryContext,
 ): ScoreResult {
   const factors: ScoreFactor[] = [];
 
@@ -124,9 +188,16 @@ export function scoreTransaction(
           } in the last 6 months`,
   });
 
-  const score = Math.round(factors.reduce((total, factor) => total + factor.points, 0));
+  const base = factors.reduce((total, factor) => total + factor.points, 0);
+  const memoryAdjustment = memoryAdjustmentFor(memory, category);
+  const score = Math.round(clamp(base + (memoryAdjustment?.points ?? 0), 0, 100));
 
-  return { score, factors, passesThreshold: score >= NUDGE_SCORE_THRESHOLD };
+  return {
+    score,
+    factors,
+    memoryAdjustment,
+    passesThreshold: score >= NUDGE_SCORE_THRESHOLD,
+  };
 }
 
 function round(value: number): number {

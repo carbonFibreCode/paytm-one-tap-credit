@@ -9,6 +9,7 @@
  */
 
 import type { ProductState, UserProfile } from './types';
+import { personOrDefault } from './people';
 import { generateLedger, type PersonaSpec } from './memory/ledger';
 import { computeFeatures, type CreditRecord } from './memory/features';
 import { deriveEligibilitySignal } from './memory/signal';
@@ -21,20 +22,12 @@ export interface Persona {
   optedOut: boolean;
   /** Days since a partner bank turned down an application, if any. */
   bankRejectionDaysAgo?: number;
-  /** One-line summary shown in the demo drawer. */
-  tagline: string;
-  /** What this persona is here to prove. */
-  demonstrates: string;
 }
 
 export const PERSONAS: Persona[] = [
   {
-    tagline: 'Salaried, clean repayment record, plenty of headroom',
-    demonstrates: 'The happy path — and the Postpaid → Card switch at higher amounts',
     spec: {
       userId: 'u_rohit',
-      displayName: 'Rohit Sharma',
-      preferredLanguage: 'hi',
       accountAgeDays: 540,
       monthlySalary: 95_000,
       salaryDay: 1,
@@ -76,12 +69,8 @@ export const PERSONAS: Persona[] = [
     ],
   },
   {
-    tagline: 'Good record, but already carrying two large EMIs',
-    demonstrates: 'The affordability gate — eligible on paper, declined responsibly',
     spec: {
       userId: 'u_priya',
-      displayName: 'Priya Nair',
-      preferredLanguage: 'en',
       accountAgeDays: 480,
       monthlySalary: 70_000,
       salaryDay: 2,
@@ -123,12 +112,8 @@ export const PERSONAS: Persona[] = [
     ],
   },
   {
-    tagline: 'Joined three weeks ago',
-    demonstrates: 'Cold start — too little history to score, so we stay silent',
     spec: {
       userId: 'u_aman',
-      displayName: 'Aman Verma',
-      preferredLanguage: 'hi',
       accountAgeDays: 21,
       monthlySalary: 55_000,
       salaryDay: 1,
@@ -167,12 +152,8 @@ export const PERSONAS: Persona[] = [
     ],
   },
   {
-    tagline: 'Freelancer with lumpy, irregular income',
-    demonstrates: 'A weak eligibility signal, with the derivation shown line by line',
     spec: {
       userId: 'u_deepak',
-      displayName: 'Deepak Rao',
-      preferredLanguage: 'en',
       accountAgeDays: 400,
       monthlySalary: 32_000,
       salaryDay: 14,
@@ -211,12 +192,8 @@ export const PERSONAS: Persona[] = [
     ],
   },
   {
-    tagline: 'Already uses Postpaid, ₹18,000 of limit left',
-    demonstrates: 'Limit-aware suppression — never offer an offer that cannot complete',
     spec: {
       userId: 'u_meera',
-      displayName: 'Meera Iyer',
-      preferredLanguage: 'ta',
       accountAgeDays: 620,
       monthlySalary: 88_000,
       salaryDay: 1,
@@ -255,12 +232,8 @@ export const PERSONAS: Persona[] = [
     ],
   },
   {
-    tagline: 'Turned down by the partner bank 12 days ago',
-    demonstrates: 'Bank cooling-off — we do not re-pitch a rejected application',
     spec: {
       userId: 'u_vikram',
-      displayName: 'Vikram Singh',
-      preferredLanguage: 'bn',
       accountAgeDays: 510,
       monthlySalary: 64_000,
       salaryDay: 5,
@@ -314,10 +287,12 @@ export function buildProfile(persona: Persona, asOf: string): UserProfile {
   const features = computeFeatures(ledger, asOf, persona.credit);
   const { score, breakdown } = deriveEligibilitySignal(features);
 
+  const person = personOrDefault(persona.spec.userId);
+
   return {
     userId: persona.spec.userId,
-    displayName: persona.spec.displayName,
-    preferredLanguage: persona.spec.preferredLanguage,
+    displayName: person.displayName,
+    preferredLanguage: person.preferredLanguage,
     features,
     eligibilitySignal: score,
     eligibilityBreakdown: breakdown,

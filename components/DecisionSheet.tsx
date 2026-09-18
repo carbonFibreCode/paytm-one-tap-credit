@@ -1,0 +1,165 @@
+'use client';
+
+/**
+ * The full audit trail, given room to breathe.
+ *
+ * The checkout only ever shows the score and the single requirement that was
+ * not met. Everything else — all fourteen checks, every score factor, every
+ * signal component — lives here, one tap away, so the payment screen stays a
+ * payment screen.
+ */
+
+import { AnimatePresence, motion } from 'framer-motion';
+import { X } from 'lucide-react';
+import type { Decision, ScoreFactor, SignalComponent } from '@/lib/types';
+import { useApp } from '@/lib/client/state';
+import { humaniseGate } from '@/lib/format';
+import { DecisionTrace } from './DecisionTrace';
+import { Pill } from './Chrome';
+
+/** The component furthest from full marks — the reason a score is held back. */
+export function weakestSignal(components: SignalComponent[]): SignalComponent | null {
+  if (components.length === 0) return null;
+  return components.reduce((lowest, component) =>
+    component.points / component.max < lowest.points / lowest.max ? component : lowest,
+  );
+}
+
+export function weakestFactor(factors: ScoreFactor[]): ScoreFactor | null {
+  if (factors.length === 0) return null;
+  return factors.reduce((lowest, factor) =>
+    factor.points / factor.weight < lowest.points / lowest.weight ? factor : lowest,
+  );
+}
+
+export function DecisionSheet() {
+  const { traceOpen, toggleTrace, decision, clearHistory } = useApp();
+
+  return (
+    <AnimatePresence>
+      {traceOpen && decision ? (
+        <>
+          <motion.button
+            type="button"
+            aria-label="Close decision details"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => toggleTrace(false)}
+            className="absolute inset-0 z-40 bg-black/70"
+          />
+
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 280, damping: 30 }}
+            className="absolute inset-x-0 bottom-0 z-50 flex max-h-[92%] flex-col rounded-t-3xl border-t border-line bg-surface"
+          >
+            {/* Header stays fixed so the close control is always reachable. */}
+            <div className="flex shrink-0 items-start gap-3 border-b border-line px-5 pb-3 pt-4">
+              <div className="min-w-0 flex-1">
+                <span className="flex items-center gap-2">
+                  <Pill tone={decision.showNudge ? 'good' : 'bad'}>
+                    {decision.showNudge ? 'Offer shown' : 'No nudge'}
+                  </Pill>
+                  <span className="truncate text-[12px] font-semibold text-body">
+                    {decision.showNudge
+                      ? 'All checks passed'
+                      : humaniseGate(decision.blockedBy ?? 'SCORE_THRESHOLD')}
+                  </span>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => toggleTrace(false)}
+                aria-label="Close decision details"
+                className="-mr-1 -mt-1 shrink-0 rounded-lg p-1.5 text-muted transition hover:bg-elevated hover:text-body"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="scroll-slim flex-1 space-y-4 overflow-y-auto px-5 pb-6 pt-4">
+              {/* Why, in one sentence. */}
+              <p className="text-[12px] leading-relaxed text-body">
+                {decision.blockedReason ?? decision.trace.summary}
+              </p>
+
+              <div className="flex gap-2">
+                <Stat label="Relevance" value={decision.score} />
+                <Stat label="Eligibility signal" value={decision.eligibilitySignal} />
+              </div>
+
+              {/* The single requirement furthest from being met. */}
+              {decision.showNudge ? null : <Shortfall decision={decision} />}
+
+              {decision.blockedBy === 'FREQUENCY_CAP' ? (
+                <div className="flex items-center gap-2 rounded-xl border border-line bg-elevated p-2.5">
+                  <span className="min-w-0 flex-1 text-[10px] leading-snug text-muted">
+                    You declined an offer recently, so we are staying quiet for seven days.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={clearHistory}
+                    className="shrink-0 rounded-lg border border-brand/40 bg-brand/10 px-2.5 py-1 text-[10px] font-medium text-brand transition active:scale-95"
+                  >
+                    Reset
+                  </button>
+                </div>
+              ) : null}
+
+              <div className="border-t border-line pt-4">
+                <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-faint">
+                  Full decision trail
+                </h3>
+                <DecisionTrace decision={decision} />
+              </div>
+            </div>
+          </motion.div>
+        </>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex-1 rounded-xl border border-line bg-elevated px-3 py-2">
+      <p className="text-[9px] uppercase tracking-wide text-faint">{label}</p>
+      <p className="text-[16px] font-semibold text-body">
+        {value}
+        <span className="text-[10px] font-normal text-faint">/100</span>
+      </p>
+    </div>
+  );
+}
+
+/** Compact "here is the one thing that fell short" block used on the checkout. */
+export function Shortfall({ decision }: { decision: Decision }) {
+  const weakest = weakestSignal(decision.eligibilityBreakdown);
+  if (!weakest) return null;
+
+  const pct = weakest.max === 0 ? 0 : (weakest.points / weakest.max) * 100;
+
+  return (
+    <div className="rounded-xl border border-line bg-ink/40 p-2.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="flex items-center gap-1.5">
+          <Pill tone="warn">weakest</Pill>
+          <span className="text-[11px] font-medium text-body">{weakest.label}</span>
+        </span>
+        <span className="shrink-0 font-mono text-[11px] text-muted">
+          {weakest.points}/{weakest.max}
+        </span>
+      </div>
+      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-line">
+        <div
+          className="h-full rounded-full bg-warn transition-[width] duration-500"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="mt-1.5 text-[10px] leading-snug text-faint">{weakest.detail}</p>
+    </div>
+  );
+}

@@ -7,7 +7,8 @@
  */
 
 import { NextResponse } from 'next/server';
-import { buildProfileWithLedger, getPersona, PERSONAS } from '@/lib/personas';
+import { buildProfileWithLedger, getPersona } from '@/lib/personas';
+import { personOrDefault, PEOPLE } from '@/lib/people';
 
 /** Most recent rows only — enough to show the pattern without shipping 250 entries. */
 const LEDGER_PAGE_SIZE = 40;
@@ -18,12 +19,12 @@ export async function GET(request: Request) {
   if (!userId) {
     // No user asked for — list who is available.
     return NextResponse.json({
-      personas: PERSONAS.map((persona) => ({
-        userId: persona.spec.userId,
-        displayName: persona.spec.displayName,
-        preferredLanguage: persona.spec.preferredLanguage,
-        tagline: persona.tagline,
-        demonstrates: persona.demonstrates,
+      personas: PEOPLE.map((person) => ({
+        userId: person.userId,
+        displayName: person.displayName,
+        preferredLanguage: person.preferredLanguage,
+        tagline: person.tagline,
+        demonstrates: person.demonstrates,
       })),
     });
   }
@@ -35,13 +36,14 @@ export async function GET(request: Request) {
 
   const now = new Date().toISOString();
   const { profile, ledger } = buildProfileWithLedger(persona, now);
+  const person = personOrDefault(userId);
 
   return NextResponse.json({
     userId: profile.userId,
     displayName: profile.displayName,
     preferredLanguage: profile.preferredLanguage,
-    tagline: persona.tagline,
-    demonstrates: persona.demonstrates,
+    tagline: person.tagline,
+    demonstrates: person.demonstrates,
     eligibilitySignal: profile.eligibilitySignal,
     eligibilityBreakdown: profile.eligibilityBreakdown,
     features: profile.features,

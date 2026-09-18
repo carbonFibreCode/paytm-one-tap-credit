@@ -29,6 +29,7 @@ describe('/api/decide validation', () => {
   test.each([
     [{ ...valid, userId: 'u_nobody' }, 404, /Unknown userId/],
     [{ ...valid, merchantId: 'm_nope' }, 404, /Unknown merchantId/],
+    [{ ...valid, amount: 0 }, 400, /greater than zero/],
     [{ ...valid, amount: -5 }, 400, /greater than zero/],
     [{ ...valid, amount: 500.5 }, 400, /whole number of rupees/],
     [{ ...valid, amount: 2_00_00_000 }, 400, /implausibly large/],

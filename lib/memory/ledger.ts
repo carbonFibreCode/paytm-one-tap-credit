@@ -10,7 +10,7 @@
  * every behavioural feature is then re-derived from the ledger rows alone.
  */
 
-import type { Instrument, Language, LedgerEntry, MerchantCategory } from '../types';
+import type { Instrument, LedgerEntry, MerchantCategory } from '../types';
 import { addDays, addMonths, daysInMonth, toISODate, parseDate } from '../dates';
 
 // --- deterministic randomness ---------------------------------------------
@@ -51,8 +51,6 @@ export interface BigTicketSpec {
 
 export interface PersonaSpec {
   userId: string;
-  displayName: string;
-  preferredLanguage: Language;
   /** How far back the history runs. Short histories trigger the cold-start gate. */
   accountAgeDays: number;
 

@@ -10,15 +10,14 @@
  *  - "No thanks, pay normally" carries the same visual weight as the accept
  *    button. RBI and NPCI guidance on customer choice is not a slide for us; a
  *    decline the user cannot find is a dark pattern.
- *  - "Why am I seeing this?" is on the card itself, not buried in settings.
+ *  - "Why am I seeing this?" sits on the card itself, opening the full audit
+ *    trail in its own sheet rather than unfolding it over the payment screen.
  */
 
-import { AnimatePresence, motion } from 'framer-motion';
-import { useState } from 'react';
+import { motion } from 'framer-motion';
 import type { Decision } from '@/lib/types';
 import { formatINR } from '@/lib/format';
-import type { NudgeCopy } from '@/lib/client/state';
-import { DecisionTrace } from './DecisionTrace';
+import { useApp, type NudgeCopy } from '@/lib/client/state';
 import { Pill } from './Chrome';
 
 export function NudgeCard({
@@ -36,7 +35,7 @@ export function NudgeCard({
   onAccept: () => void;
   onDecline: () => void;
 }) {
-  const [showTrace, setShowTrace] = useState(false);
+  const { toggleTrace } = useApp();
   const offer = decision.offer;
   if (!offer) return null;
 
@@ -117,28 +116,13 @@ export function NudgeCard({
         <div className="flex items-center justify-between gap-2">
           <button
             type="button"
-            onClick={() => setShowTrace((open) => !open)}
+            onClick={() => toggleTrace(true)}
             className="text-[11px] text-brand underline-offset-2 hover:underline"
-            aria-expanded={showTrace}
           >
-            Why am I seeing this? {showTrace ? '▴' : '▾'}
+            Why am I seeing this? &rarr;
           </button>
           {copy ? <CopySource copy={copy} /> : null}
         </div>
-
-        <AnimatePresence initial={false}>
-          {showTrace ? (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
-              className="overflow-hidden"
-            >
-              <DecisionTrace decision={decision} />
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
       </div>
     </motion.div>
   );

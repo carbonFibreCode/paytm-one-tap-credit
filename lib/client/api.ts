@@ -40,6 +40,8 @@ export interface DecideOutcome {
 }
 
 export const N8N_WEBHOOK_URL = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL ?? '';
+export const N8N_OUTCOME_URL = process.env.NEXT_PUBLIC_N8N_OUTCOME_WEBHOOK_URL ?? '';
+export const N8N_EDITOR_URL = process.env.NEXT_PUBLIC_N8N_EDITOR_URL ?? '';
 
 export function n8nConfigured(): boolean {
   return N8N_WEBHOOK_URL.length > 0;
@@ -56,8 +58,16 @@ async function postJson<T>(url: string, body: unknown, timeoutMs: number): Promi
       signal: controller.signal,
     });
     if (!response.ok) {
+      // Our routes answer with `{ error }`; prefer that over dumping the raw body.
       const detail = await response.text().catch(() => '');
-      throw new Error(`${response.status} ${detail.slice(0, 160)}`);
+      let message = detail.slice(0, 160);
+      try {
+        const parsed = JSON.parse(detail);
+        if (typeof parsed?.error === 'string') message = parsed.error;
+      } catch {
+        // Not JSON — the truncated body is the best we have.
+      }
+      throw new Error(`${response.status} ${message}`.trim());
     }
     return (await response.json()) as T;
   } finally {
@@ -145,4 +155,28 @@ export interface NudgeTextResult {
 
 export async function requestNudgeText(params: NudgeTextParams): Promise<NudgeTextResult> {
   return postJson<NudgeTextResult>('/api/nudge-text', params, DIRECT_TIMEOUT_MS);
+}
+
+/**
+ * Tell n8n what the user did with an offer.
+ *
+ * Deliberately fire-and-forget: the accept/decline animation must never wait on
+ * a workflow, and a logging failure must never surface to the user. The outcome
+ * is already persisted locally — this only feeds the audit trail and the digest.
+ */
+export function reportOutcome(outcome: {
+  transactionId: string;
+  userId: string;
+  product: string | null;
+  outcome: 'shown' | 'accepted' | 'declined';
+}): void {
+  if (!N8N_OUTCOME_URL) return;
+  void fetch(N8N_OUTCOME_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...outcome, at: new Date().toISOString() }),
+    keepalive: true,
+  }).catch(() => {
+    // Nothing to do — the trail is a side-effect, not part of the payment.
+  });
 }

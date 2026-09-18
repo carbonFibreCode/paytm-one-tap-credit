@@ -1,0 +1,169 @@
+{
+  "name": "3 · Sarvam copy pre-warm (nightly)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 3
+            }
+          ]
+        }
+      },
+      "id": "33333333-0000-4000-8000-000000000001",
+      "name": "Every night at 3am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build the combinations worth having warm before the morning peak.\n// Generating copy ahead of time turns a checkout latency problem into an\n// overnight batch problem, so the nudge card never waits on a language model.\nconst categories = ['electronics', 'travel', 'jewellery', 'apparel', 'healthcare'];\nconst languages = ['hi', 'en', 'ta', 'bn'];\nconst bands = [\n  { amount: 15000, months: 3, emi: 5000, noCost: true, product: 'postpaid', partner: 'Paytm Postpaid' },\n  { amount: 50000, months: 3, emi: 16667, noCost: true, product: 'postpaid', partner: 'Paytm Postpaid' },\n  { amount: 90000, months: 9, emi: 10633, noCost: false, product: 'card', partner: 'Paytm HDFC Bank Credit Card' },\n];\n\nconst combos = [];\nfor (const merchantCategory of categories) {\n  for (const language of languages) {\n    for (const band of bands) {\n      combos.push({\n        json: { merchantCategory, language, merchantName: 'Kroma Electronics', ...band },\n      });\n    }\n  }\n}\n\nreturn combos;"
+      },
+      "id": "33333333-0000-4000-8000-000000000002",
+      "name": "Build combinations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 3,
+        "options": {}
+      },
+      "id": "33333333-0000-4000-8000-000000000003",
+      "name": "Loop in batches of 3",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        60,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3111/api/nudge-text",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "id": "33333333-0000-4000-8000-000000000004",
+      "name": "Warm the cache",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        300,
+        420
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Report what the run achieved. `source` tells us whether Sarvam actually\n// answered or the templates covered for it, which is worth knowing before a demo.\nconst items = $input.all().map((item) => item.json);\nconst bySource = {};\nfor (const item of items) {\n  const key = item.source ?? 'failed';\n  bySource[key] = (bySource[key] ?? 0) + 1;\n}\n\nreturn [{ json: { warmed: items.length, bySource, finishedAt: new Date().toISOString() } }];"
+      },
+      "id": "33333333-0000-4000-8000-000000000005",
+      "name": "Warm-up report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        180
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "33333333-0000-4000-8000-00000000000f",
+      "name": "Run now (manual)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -380,
+        460
+      ]
+    }
+  ],
+  "connections": {
+    "Every night at 3am": {
+      "main": [
+        [
+          {
+            "node": "Build combinations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build combinations": {
+      "main": [
+        [
+          {
+            "node": "Loop in batches of 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop in batches of 3": {
+      "main": [
+        [
+          {
+            "node": "Warm-up report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Warm the cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Warm the cache": {
+      "main": [
+        [
+          {
+            "node": "Loop in batches of 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run now (manual)": {
+      "main": [
+        [
+          {
+            "node": "Build combinations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "id": "otcPrewarm000001",
+  "active": false
+}

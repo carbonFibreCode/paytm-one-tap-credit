@@ -1,0 +1,510 @@
+{
+  "name": "1 · Decision pipeline (n8n orchestrates every stage)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "one-tap-credit",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1",
+      "name": "Transaction event",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1100,
+        300
+      ],
+      "webhookId": "11111111-0000-4000-8000-000000000001"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3111/api/memory/recall",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ userId: $('Transaction event').first().json.body.userId }) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "a2",
+      "name": "Recall memory",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -880,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3111/api/engine/profile",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ userId: $('Transaction event').first().json.body.userId, timestamp: $('Transaction event').first().json.body.timestamp }) }}",
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "id": "a3",
+      "name": "Build profile",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -660,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 400
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3111/api/engine/gates",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ profile: $json.profile, amount: $('Transaction event').first().json.body.amount, merchantId: $('Transaction event').first().json.body.merchantId, merchantCategory: $('Transaction event').first().json.body.merchantCategory, merchantName: $('Transaction event').first().json.body.merchantName, timestamp: $json.asOf, selectedInstrument: $('Transaction event').first().json.body.selectedInstrument, nudgeHistory: $('Transaction event').first().json.body.nudgeHistory }) }}",
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "id": "a4",
+      "name": "Run gates",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -440,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 400
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a5",
+              "leftValue": "={{ $('Run gates').first().json.passed }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "a5",
+      "name": "Gates passed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        20,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3111/api/engine/score",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ profile: $('Build profile').first().json.profile, amount: $('Transaction event').first().json.body.amount, merchantCategory: $('Run gates').first().json.merchantCategory, memory: $('Recall memory').first().json.memory }) }}",
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "id": "a6",
+      "name": "Score relevance",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a7",
+              "leftValue": "={{ $json.passesThreshold }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "a7",
+      "name": "Worth interrupting?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3111/api/engine/offer",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ profile: $('Build profile').first().json.profile, amount: $('Transaction event').first().json.body.amount, merchantCategory: $('Run gates').first().json.merchantCategory, timestamp: $('Run gates').first().json.timestamp, fundingProducts: $('Run gates').first().json.fundingProducts, eligibleProducts: $('Run gates').first().json.eligibleProducts }) }}",
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "id": "a8",
+      "name": "Build offer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// The copy should lead with a no-cost plan when one exists — that is the option\n// a user actually weighs against paying in full.\nconst offer = $input.first().json.offer;\nconst profile = $('Build profile').first().json.profile;\nconst tx = $('Transaction event').first().json.body;\n\nconst headline =\n  offer.tenures.find((t) => t.noCost) ??\n  offer.tenures.reduce((low, t) => (t.emi < low.emi ? t : low));\n\nreturn [{ json: { headline, nudgeRequest: {\n  product: offer.product,\n  partner: offer.partner,\n  amount: tx.amount,\n  merchantName: $('Run gates').first().json.merchantName ?? tx.merchantName ?? 'Merchant',\n  merchantCategory: $('Run gates').first().json.merchantCategory,\n  months: headline.months,\n  emi: headline.emi,\n  noCost: headline.noCost,\n  language: tx.language ?? profile.preferredLanguage,\n} } }];"
+      },
+      "id": "a9",
+      "name": "Pick headline plan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3111/api/nudge-text",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.nudgeRequest) }}",
+        "options": {
+          "timeout": 6000
+        }
+      },
+      "id": "a10",
+      "name": "Sarvam nudge copy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        60
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 400
+    },
+    {
+      "parameters": {
+        "jsCode": "// Assemble the Decision the app expects from the stages n8n just ran.\n// Each field traces back to the node that produced it — this is the pipeline\n// the pitch describes, made literal.\nconst tx = $('Transaction event').first().json.body;\nconst profile = $('Build profile').first().json.profile;\nconst gates = $('Run gates').first().json;\nconst scored = $('Score relevance').first().json;\nconst built = $('Build offer').first().json;\nconst headline = $('Pick headline plan').first().json.headline;\nconst memory = $('Recall memory').first().json;\nconst copy = $input.first().json;\n\nconst usable = typeof copy.nudgeText === 'string' && copy.nudgeText.length > 0;\nconst rupees = (n) => '₹' + Math.round(n).toLocaleString('en-IN');\n\nconst summary =\n  `${rupees(tx.amount)} scored ${scored.score}/100 for instalment credit. ` +\n  `${built.offer.partner} can cover it in ${headline.months} instalments of ` +\n  `${rupees(headline.emi)}${headline.noCost ? ' at no extra cost' : ''}.`;\n\nreturn [{ json: {\n  transactionId: tx.transactionId ?? `txn_${tx.userId}_${tx.amount}`,\n  showNudge: true,\n  product: built.product,\n  score: scored.score,\n  blockedBy: null,\n  blockedReason: null,\n  offer: built.offer,\n  decline: built.decline,\n  amount: tx.amount,\n  eligibilitySignal: profile.eligibilitySignal,\n  eligibilityBreakdown: profile.eligibilityBreakdown,\n  trace: {\n    gates: gates.gates,\n    factors: scored.factors,\n    memoryAdjustment: scored.memoryAdjustment,\n    productRationale: built.productRationale,\n    counterfactual:\n      `Below ₹2,000, or in an everyday category like groceries or fuel, this would not have been shown.` +\n      (built.tenuresWithheld > 0\n        ? ` ${built.tenuresWithheld} shorter tenure(s) were withheld as unaffordable.`\n        : ''),\n    summary,\n  },\n  nudgeText: {\n    text: usable ? copy.nudgeText : summary,\n    source: usable ? copy.source : 'engine-summary',\n    reason: usable ? (copy.reason ?? null) : 'nudge-text stage failed',\n    latencyMs: usable ? (copy.latencyMs ?? null) : null,\n  },\n  memory: { ...memory.memory, backend: memory.backend },\n  user: { userId: profile.userId, displayName: profile.displayName, preferredLanguage: profile.preferredLanguage },\n  merchant: { id: tx.merchantId, name: gates.merchantName ?? tx.merchantName ?? 'Merchant', category: gates.merchantCategory },\n  engine: { version: 'rules-v1-staged', evaluatedAt: gates.timestamp, orchestrator: 'n8n' },\n} }];"
+      },
+      "id": "a11",
+      "name": "Assemble decision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "a12",
+      "name": "Respond with nudge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1360,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3111/api/audit",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'decision', transactionId: $json.transactionId, userId: $json.user.userId, userName: $json.user.displayName, amount: $json.amount, merchantName: $json.merchant.name, merchantCategory: $json.merchant.category, showNudge: $json.showNudge, product: $json.product, score: $json.score, eligibilitySignal: $json.eligibilitySignal, blockedBy: $json.blockedBy, blockedReason: $json.blockedReason, servedBy: 'n8n', nudgeSource: $json.nudgeText ? $json.nudgeText.source : null, at: $json.engine.evaluatedAt }) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "a13",
+      "name": "Log decision · shown",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1580,
+        60
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Both refusal paths land here: a hard gate blocked it, or every gate passed\n// but the moment scored too low. The response shape is identical either way —\n// no-nudge is a first-class answer, not an error.\nconst tx = $('Transaction event').first().json.body;\nconst profile = $('Build profile').first().json.profile;\nconst gates = $('Run gates').first().json;\nconst memory = $('Recall memory').first().json;\n\nlet scored = null;\ntry { scored = $('Score relevance').first().json; } catch (e) { scored = null; }\n\nconst blockedByGate = gates.passed === false;\nconst blockedBy = blockedByGate ? gates.blockedBy : 'SCORE_THRESHOLD';\nconst blockedReason = blockedByGate\n  ? gates.blockedReason\n  : `Relevance score ${scored ? scored.score : 0}/100 is below the threshold of ${scored ? scored.threshold : 60} — eligible, but this is not a moment worth interrupting`;\n\nreturn [{ json: {\n  transactionId: tx.transactionId ?? `txn_${tx.userId}_${tx.amount}`,\n  showNudge: false,\n  product: null,\n  score: scored ? scored.score : 0,\n  blockedBy,\n  blockedReason,\n  offer: null,\n  decline: null,\n  amount: tx.amount,\n  eligibilitySignal: profile.eligibilitySignal,\n  eligibilityBreakdown: profile.eligibilityBreakdown,\n  trace: {\n    gates: gates.gates,\n    factors: scored ? scored.factors : [],\n    memoryAdjustment: scored ? scored.memoryAdjustment : null,\n    productRationale: 'No product selected — the pipeline stopped before the offer stage',\n    counterfactual: blockedByGate\n      ? 'This gate must pass before relevance is even considered.'\n      : 'A higher-relevance moment for the same user would clear the threshold.',\n    summary: `No credit offer shown. ${blockedReason}`,\n  },\n  memory: { ...memory.memory, backend: memory.backend },\n  user: { userId: profile.userId, displayName: profile.displayName, preferredLanguage: profile.preferredLanguage },\n  merchant: { id: tx.merchantId, name: gates.merchantName ?? tx.merchantName ?? 'Merchant', category: gates.merchantCategory },\n  engine: { version: 'rules-v1-staged', evaluatedAt: gates.timestamp, orchestrator: 'n8n' },\n} }];"
+      },
+      "id": "a14",
+      "name": "Assemble withheld",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "a15",
+      "name": "Respond, no nudge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        700,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3111/api/audit",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'decision', transactionId: $json.transactionId, userId: $json.user.userId, userName: $json.user.displayName, amount: $json.amount, merchantName: $json.merchant.name, merchantCategory: $json.merchant.category, showNudge: $json.showNudge, product: $json.product, score: $json.score, eligibilitySignal: $json.eligibilitySignal, blockedBy: $json.blockedBy, blockedReason: $json.blockedReason, servedBy: 'n8n', nudgeSource: $json.nudgeText ? $json.nudgeText.source : null, at: $json.engine.evaluatedAt }) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "a16",
+      "name": "Log decision · withheld",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        420
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Transaction event": {
+      "main": [
+        [
+          {
+            "node": "Recall memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recall memory": {
+      "main": [
+        [
+          {
+            "node": "Build profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build profile": {
+      "main": [
+        [
+          {
+            "node": "Run gates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run gates": {
+      "main": [
+        [
+          {
+            "node": "Score relevance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gates passed?": {
+      "main": [
+        [
+          {
+            "node": "Worth interrupting?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Assemble withheld",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score relevance": {
+      "main": [
+        [
+          {
+            "node": "Gates passed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Worth interrupting?": {
+      "main": [
+        [
+          {
+            "node": "Build offer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Assemble withheld",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build offer": {
+      "main": [
+        [
+          {
+            "node": "Pick headline plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick headline plan": {
+      "main": [
+        [
+          {
+            "node": "Sarvam nudge copy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sarvam nudge copy": {
+      "main": [
+        [
+          {
+            "node": "Assemble decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assemble decision": {
+      "main": [
+        [
+          {
+            "node": "Respond with nudge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond with nudge": {
+      "main": [
+        [
+          {
+            "node": "Log decision · shown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assemble withheld": {
+      "main": [
+        [
+          {
+            "node": "Respond, no nudge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond, no nudge": {
+      "main": [
+        [
+          {
+            "node": "Log decision · withheld",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "id": "otcPipeline00001",
+  "active": true
+}
