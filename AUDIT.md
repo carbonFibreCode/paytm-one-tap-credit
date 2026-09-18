@@ -444,6 +444,42 @@ scripts/
 
 ---
 
+## 9. Outcome — what was done
+
+Carried out 18 Sep 2026 across seven commits, each verified (typecheck, lint,
+tests, build; live checks against Neon where persistence changed) and
+committed separately so any one can be reverted alone.
+
+| Commit    | Step    | Result                                                                                                                                                                                                                                                                                                           |
+| --------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `e97e61e` | 1 — P0  | `lib/engine/offer.ts` is the only offer implementation; `tests/offer-parity.test.ts` drives 480 combinations through both paths. Error boundaries added. CI added. Both pre-existing lint errors fixed structurally, not suppressed.                                                                             |
+| `da868d3` | 2a      | `lib/domain.ts` + `lib/schemas.ts` + `lib/math.ts` + `lib/qr.ts` + `lib/engine/explain.ts`. Seven `rupees()` → one `formatINR`, three `clamp()`, three `round()`, three QR option blocks, three category tables → one `CATEGORY_META`.                                                                           |
+| `6cb9887` | 2c      | `lib/log.ts` (pino), ten named events at every fallback boundary, `x-vercel-id` request correlation.                                                                                                                                                                                                             |
+| `df1862a` | 2b + 2d | `jsonRoute`/`getRoute` — twelve routes lost their boilerplate and three error envelopes became one. `lib/env.ts` validates the environment; production refuses to start without `QR_SIGNING_SECRET`. Timestamps → `mode: 'date'`, deleting `normaliseIntent()` and fixing the same latent bug in `listPayments`. |
+| `6e52feb` | 3a      | `lib/profile/`, `lib/integrations/`, `lib/fixtures/`, `lib/audit/repository.ts`, `lib/audit/summary.ts`, `lib/profile/build.ts`. Persona credit record derived rather than restated.                                                                                                                             |
+| `8c0761b` | 3b      | `components/ui.tsx` (Bar, Skeleton, Chip, PaytmWordmark), SWR for `useProfile`, first eleven render tests.                                                                                                                                                                                                       |
+| `c61ca72` | 3c      | `lib/client/state-machine.ts` — the reducer, pure and now covered by eighteen tests.                                                                                                                                                                                                                             |
+| `ceae15b` | 4       | Twenty-eight tests for `validateNudgeText`, `extractOutcomes`, `detectSalary`, `detectRecurringObligations`. Prettier, gated in CI.                                                                                                                                                                              |
+| `28cc37c` | —       | CI's first real run failed on a stale lock file and Node 20 vs vitest 5. Both fixed.                                                                                                                                                                                                                             |
+
+**Tests: 89 → 627.** Lint: 2 errors → clean. Logging: 4 `console.warn` → 10 structured events.
+
+### Deviations from this document, and why
+
+- **§4.10 error envelope.** The audit proposed `{ ok, error: { code, message } }`. On implementation that is a breaking change to the n8n code nodes and `lib/client/api.ts` for cosmetic gain, so the existing `{ error: string }` was kept and made universal through one helper instead.
+- **§4.5 `Section` and `Stat`.** Counted as six duplicates. Reading them, they are the same _name_ wrapping three different designs each — different heading levels and spacing, on purpose. Merging would have changed the screens, so they were left alone. Only the genuine duplicates (Bar, Skeleton, Chip, PaytmWordmark) were extracted.
+- **§4.6 zustand.** Not done. The case rested partly on two `eslint-disable` directives, both since removed, and on the 600-line file, since split. What remains is a library swap in the layer that drives every screen, with no browser available to click through — not a trade worth making the night before the demo. The reducer is now pure and tested, which was the real risk.
+
+### Still open
+
+- pglite store tests (§6.5) and route-level status tests (§6.6).
+- Coverage tooling and a threshold on `lib/engine/**`.
+- The n8n `code` nodes still hold ~60 lines of JS in JSON (§5, n8n).
+- `DELETE /api/payments` and `POST /api/intents` remain unauthenticated (§4.9) — fine for a demo URL, not for anything else.
+- `qrcode.react` to remove the two `dangerouslySetInnerHTML` sites.
+
+---
+
 ## 9. Suggested order of work
 
 1. **P0 today (≈1 h):** `lib/engine/offer.ts` + parity test; `app/error.tsx`; CI workflow. Commit, push, verify.
