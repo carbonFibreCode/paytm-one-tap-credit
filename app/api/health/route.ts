@@ -4,12 +4,12 @@
  */
 
 import { NextResponse } from 'next/server';
-import { sarvamConfigured } from '@/lib/nudge/sarvam';
-import { PERSONAS } from '@/lib/personas';
-import { MERCHANTS } from '@/lib/merchants';
+import { sarvamConfigured } from '@/lib/integrations/sarvam';
+import { PERSONAS } from '@/lib/fixtures/personas';
+import { MERCHANTS } from '@/lib/fixtures/merchants';
 import { configured } from '@/lib/env';
 import { dbConfigured } from '@/lib/db/client';
-import { countRecords } from '@/lib/audit/db';
+import { countRecords } from '@/lib/audit/repository';
 import { ENGINE_VERSION } from '@/lib/engine/version';
 
 /** Reports the database without letting it fail the healthcheck. */

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { decisionToRecord, nudgeEventToRecord } from '../lib/audit/db';
+import { decisionToRecord, nudgeEventToRecord } from '../lib/audit/repository';
 import { insertDecisionSchema, insertNudgeEventSchema } from '../lib/db/schema';
 import { appendRecord, readRecords, type AuditRecord } from '../lib/audit/store';
 

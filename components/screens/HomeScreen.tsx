@@ -33,8 +33,8 @@ import {
   UserRound,
   type LucideIcon,
 } from 'lucide-react';
-import { MERCHANTS } from '@/lib/merchants';
-import { personOrDefault } from '@/lib/people';
+import { MERCHANTS } from '@/lib/fixtures/merchants';
+import { personOrDefault } from '@/lib/fixtures/people';
 import { useApp } from '@/lib/client/state';
 import { formatINR } from '@/lib/format';
 import { Monogram } from '../Chrome';

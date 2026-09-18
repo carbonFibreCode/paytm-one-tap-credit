@@ -2,8 +2,9 @@ import { describe, expect, test } from 'vitest';
 import { decide } from '../lib/engine/decide';
 import { buildTenures } from '../lib/engine/emi';
 import { amountFit } from '../lib/engine/score';
-import { buildProfile, getPersona } from '../lib/personas';
-import { getMerchant } from '../lib/merchants';
+import { getPersona } from '../lib/fixtures/personas';
+import { buildProfile } from '../lib/profile/build';
+import { getMerchant } from '../lib/fixtures/merchants';
 import type { Decision, Instrument, NudgeHistoryEntry } from '../lib/types';
 import { addDays } from '../lib/dates';
 

@@ -10,8 +10,9 @@ import { describe, expect, test } from 'vitest';
 import { POST as gatesStage } from '../app/api/engine/gates/route';
 import { POST as offerStage } from '../app/api/engine/offer/route';
 import { decide } from '../lib/engine/decide';
-import { buildProfile, getPersona } from '../lib/personas';
-import { getMerchant, MERCHANTS } from '../lib/merchants';
+import { getPersona } from '../lib/fixtures/personas';
+import { buildProfile } from '../lib/profile/build';
+import { getMerchant, MERCHANTS } from '../lib/fixtures/merchants';
 import type { LiveCredit, RecurringObligation } from '../lib/types';
 
 const NOW = '2026-09-19T14:30:00+05:30';

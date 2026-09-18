@@ -10,7 +10,7 @@
 
 import { motion } from 'framer-motion';
 import { ChevronRight } from 'lucide-react';
-import { PEOPLE } from '@/lib/people';
+import { PEOPLE } from '@/lib/fixtures/people';
 import { useApp } from '@/lib/client/state';
 import { formatINR } from '@/lib/format';
 

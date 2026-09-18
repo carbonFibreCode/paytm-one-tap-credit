@@ -22,7 +22,7 @@ import { renderQrSvg } from '@/lib/qr';
 import { dbConfigured } from '@/lib/db/client';
 import { ensureStaticIntents } from '@/lib/intents/store';
 import { signingConfigured } from '@/lib/intents/sign';
-import { MERCHANTS } from '@/lib/merchants';
+import { MERCHANTS } from '@/lib/fixtures/merchants';
 import { buildUpiPayload, upiVpa } from '@/lib/upi';
 import { formatINR } from '@/lib/format';
 import { DynamicQr } from '@/components/DynamicQr';

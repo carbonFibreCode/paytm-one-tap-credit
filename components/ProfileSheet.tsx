@@ -11,7 +11,7 @@
 import { Landmark, Languages, Wallet, X } from 'lucide-react';
 import { useApp } from '@/lib/client/state';
 import { useProfile } from '@/lib/client/useProfile';
-import { personOrDefault } from '@/lib/people';
+import { personOrDefault } from '@/lib/fixtures/people';
 import { LANGUAGE_NAMES } from '@/lib/domain';
 import { formatINR } from '@/lib/format';
 import { Pill } from './Chrome';

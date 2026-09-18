@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { buildUpiPayload, parseUpiPayload, upiVpa } from '../lib/upi';
-import { getMerchant, MERCHANTS } from '../lib/merchants';
+import { getMerchant, MERCHANTS } from '../lib/fixtures/merchants';
 
 describe('UPI QR payloads', () => {
   test('every merchant round-trips through its own QR', () => {

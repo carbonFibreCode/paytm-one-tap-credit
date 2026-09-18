@@ -17,7 +17,7 @@ import type { Language } from '../types';
 import { configured, env } from '../env';
 import { formatINR } from '../format';
 import { log } from '../log';
-import { renderTemplate, type NudgeContext } from './templates';
+import { renderTemplate, type NudgeContext } from '../nudge/templates';
 
 const TIMEOUT_MS = 2_500;
 const MAX_LENGTH = 160;

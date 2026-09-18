@@ -11,7 +11,7 @@ import { ApiError, getRoute, jsonRoute, unknown } from '@/lib/api/route';
 import { dbConfigured } from '@/lib/db/client';
 import { createDynamicIntent, DYNAMIC_TTL_MINUTES, ensureStaticIntents } from '@/lib/intents/store';
 import { signingConfigured } from '@/lib/intents/sign';
-import { getMerchant } from '@/lib/merchants';
+import { getMerchant } from '@/lib/fixtures/merchants';
 
 export const GET = getRoute(async () => {
   const configured = dbConfigured();

@@ -16,8 +16,8 @@
 import type { Language } from '@/lib/types';
 import { useApp } from '@/lib/client/state';
 import { useProfile, type ProfilePayload } from '@/lib/client/useProfile';
-import { MERCHANTS } from '@/lib/merchants';
-import { PEOPLE } from '@/lib/people';
+import { MERCHANTS } from '@/lib/fixtures/merchants';
+import { PEOPLE } from '@/lib/fixtures/people';
 import { LANGUAGE_NAMES } from '@/lib/domain';
 import { formatINR, formatShortDate } from '@/lib/format';
 import { Pill } from './Chrome';

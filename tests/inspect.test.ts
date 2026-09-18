@@ -7,8 +7,9 @@
 
 import { test } from 'vitest';
 import { decide } from '../lib/engine/decide';
-import { buildProfile, getPersona } from '../lib/personas';
-import { getMerchant } from '../lib/merchants';
+import { getPersona } from '../lib/fixtures/personas';
+import { buildProfile } from '../lib/profile/build';
+import { getMerchant } from '../lib/fixtures/merchants';
 import type { Instrument } from '../lib/types';
 
 const NOW = '2026-09-19T14:30:00+05:30';

@@ -31,7 +31,7 @@ import {
 } from '../db/schema';
 import { buildSchedule } from '../engine/emi';
 import { errorInfo, log } from '../log';
-import { NO_LIVE_CREDIT } from '../personas';
+import { NO_LIVE_CREDIT } from '../profile/build';
 import type { EmiOption, LiveCredit, ProductId, RecurringObligation } from '../types';
 
 export type PaymentMethod = 'upi' | 'wallet' | 'postpaid' | 'card';

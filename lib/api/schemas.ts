@@ -26,8 +26,8 @@ import {
   productId,
   rupees,
 } from '../schemas';
-import { getMerchant, type Merchant } from '../merchants';
-import { getPersona } from '../personas';
+import { getMerchant, type Merchant } from '../fixtures/merchants';
+import { getPersona } from '../fixtures/personas';
 import { ApiError, unknown as unknownEntity } from './route';
 
 export { emiOption, instrument, isoTimestamp, language, merchantCategory, nudgeHistory, nudgeOutcome, paymentMethod, productId, rupees };

@@ -7,8 +7,9 @@
  */
 
 import { NextResponse } from 'next/server';
-import { buildProfileWithLedger, getPersona } from '@/lib/personas';
-import { personOrDefault, PEOPLE } from '@/lib/people';
+import { getPersona } from '@/lib/fixtures/personas';
+import { buildProfileWithLedger } from '@/lib/profile/build';
+import { personOrDefault, PEOPLE } from '@/lib/fixtures/people';
 import { getRoute, unknown } from '@/lib/api/route';
 import { liveCreditOrEmpty } from '@/lib/credit/store';
 

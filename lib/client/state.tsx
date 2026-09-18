@@ -22,8 +22,8 @@ import {
   type ReactNode,
 } from 'react';
 import type { Decision, EmiOption, Instrument, Language, NudgeHistoryEntry } from '../types';
-import { getMerchant, MERCHANTS } from '../merchants';
-import { personOrDefault } from '../people';
+import { getMerchant, MERCHANTS } from '../fixtures/merchants';
+import { personOrDefault } from '../fixtures/people';
 import {
   attachIntentDecision,
   n8nConfigured,

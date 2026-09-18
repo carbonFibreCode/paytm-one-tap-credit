@@ -16,7 +16,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Camera, CameraOff, ChevronLeft, Images, ShieldAlert, Zap } from 'lucide-react';
-import { MERCHANTS } from '@/lib/merchants';
+import { MERCHANTS } from '@/lib/fixtures/merchants';
 import { useApp } from '@/lib/client/state';
 import { formatINR } from '@/lib/format';
 import { parseUpiPayload } from '@/lib/upi';

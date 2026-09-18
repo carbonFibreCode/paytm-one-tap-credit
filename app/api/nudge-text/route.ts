@@ -8,7 +8,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { generateNudgeText } from '@/lib/nudge/sarvam';
+import { generateNudgeText } from '@/lib/integrations/sarvam';
 import { nudgeTextBody } from '@/lib/api/schemas';
 import { jsonRoute } from '@/lib/api/route';
 

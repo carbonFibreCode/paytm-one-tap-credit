@@ -1,4 +1,4 @@
-import type { MerchantCategory } from './types';
+import type { MerchantCategory } from '../types';
 
 export interface Merchant {
   id: string;

@@ -15,8 +15,8 @@ import { paymentBody } from '@/lib/api/schemas';
 import { ApiError, getRoute, jsonRoute, unknown } from '@/lib/api/route';
 import { clearUser, listPayments, liveCredit, recordPayment } from '@/lib/credit/store';
 import { dbConfigured } from '@/lib/db/client';
-import { getMerchant } from '@/lib/merchants';
-import { getPersona } from '@/lib/personas';
+import { getMerchant } from '@/lib/fixtures/merchants';
+import { getPersona } from '@/lib/fixtures/personas';
 
 /** Every route here is per-user; a missing id is a client error, not an empty list. */
 function requireUserId(request: Request): string {

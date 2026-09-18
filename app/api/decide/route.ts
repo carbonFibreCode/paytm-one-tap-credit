@@ -9,7 +9,8 @@
 import { NextResponse } from 'next/server';
 import { decide } from '@/lib/engine/decide';
 import { ENGINE_VERSION } from '@/lib/engine/version';
-import { buildProfile, getPersona } from '@/lib/personas';
+import { getPersona } from '@/lib/fixtures/personas';
+import { buildProfile } from '@/lib/profile/build';
 import { decideBody, resolveDecideRequest } from '@/lib/api/schemas';
 import { jsonRoute } from '@/lib/api/route';
 import { liveCreditOrEmpty } from '@/lib/credit/store';

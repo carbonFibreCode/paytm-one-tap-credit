@@ -17,7 +17,7 @@ import { BadgeCheck, ChevronRight } from 'lucide-react';
 import type { Instrument } from '@/lib/types';
 import { useApp } from '@/lib/client/state';
 import { amountInWords, formatINR, humaniseGate } from '@/lib/format';
-import { personOrDefault } from '@/lib/people';
+import { personOrDefault } from '@/lib/fixtures/people';
 import { AppBar, Monogram, Pill } from '../Chrome';
 import { NudgeCard } from '../NudgeCard';
 

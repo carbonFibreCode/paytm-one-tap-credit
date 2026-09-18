@@ -13,8 +13,8 @@ import { motion } from 'framer-motion';
 import { ArrowDownLeft, Receipt } from 'lucide-react';
 import { useApp } from '@/lib/client/state';
 import { formatINR, formatShortDate } from '@/lib/format';
-import { getMerchant } from '@/lib/merchants';
-import { personOrDefault } from '@/lib/people';
+import { getMerchant } from '@/lib/fixtures/merchants';
+import { personOrDefault } from '@/lib/fixtures/people';
 import { AppBar, Monogram, Pill } from '../Chrome';
 import { BottomNav } from '../BottomNav';
 

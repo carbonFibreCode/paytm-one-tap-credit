@@ -3,7 +3,7 @@ process.env.QR_SIGNING_SECRET = 'test-signing-secret';
 import { describe, expect, test } from 'vitest';
 import { signIntent, verifyIntent } from '../lib/intents/sign';
 import { intentState, staticRef, dynamicRef } from '../lib/intents/store';
-import { getMerchant, MERCHANTS } from '../lib/merchants';
+import { getMerchant, MERCHANTS } from '../lib/fixtures/merchants';
 import { buildUpiPayload, parseUpiPayload, unsignedPortion } from '../lib/upi';
 
 const kroma = getMerchant('m_kroma')!;

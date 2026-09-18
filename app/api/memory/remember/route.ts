@@ -7,7 +7,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { rememberOutcome } from '@/lib/memory/cognee';
+import { rememberOutcome } from '@/lib/integrations/cognee';
 import { rememberBody } from '@/lib/api/schemas';
 import { jsonRoute } from '@/lib/api/route';
 

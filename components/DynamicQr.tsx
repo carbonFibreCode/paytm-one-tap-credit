@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react';
 import { formatINR } from '@/lib/format';
 import { renderQrSvg } from '@/lib/qr';
-import type { Merchant } from '@/lib/merchants';
+import type { Merchant } from '@/lib/fixtures/merchants';
 
 interface Issued {
   ref: string;

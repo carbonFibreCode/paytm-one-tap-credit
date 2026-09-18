@@ -27,7 +27,7 @@
  */
 
 import { CATEGORY_META } from './domain';
-import { MERCHANTS, type Merchant } from './merchants';
+import { MERCHANTS, type Merchant } from './fixtures/merchants';
 /** ISO 18245 code for the merchant's category — the `mc` parameter. */
 export function merchantCategoryCode(merchant: Merchant): string {
   return CATEGORY_META[merchant.category].mcc;

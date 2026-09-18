@@ -1,9 +1,10 @@
 import { describe, expect, test } from 'vitest';
 import { decide } from '../lib/engine/decide';
 import { buildSchedule, buildTenures } from '../lib/engine/emi';
-import { computeFeatures } from '../lib/memory/features';
-import { generateLedger } from '../lib/memory/ledger';
-import { buildProfile, getPersona, NO_LIVE_CREDIT } from '../lib/personas';
+import { computeFeatures } from '../lib/profile/features';
+import { generateLedger } from '../lib/profile/ledger';
+import { creditRecordFor, getPersona } from '../lib/fixtures/personas';
+import { buildProfile, NO_LIVE_CREDIT } from '../lib/profile/build';
 import type { DecisionRequest, LiveCredit, RecurringObligation } from '../lib/types';
 
 const NOW = '2026-09-19T14:30:00+05:30';
@@ -61,8 +62,8 @@ describe('instalment schedule', () => {
 describe('live credit feeds the profile', () => {
   test('an account opened here lowers affordability capacity by 40% of its instalment', () => {
     const ledger = generateLedger(rohit.spec, NOW);
-    const before = computeFeatures(ledger, NOW, rohit.credit);
-    const after = computeFeatures(ledger, NOW, rohit.credit, [postpaidEmi()]);
+    const before = computeFeatures(ledger, NOW, creditRecordFor(rohit));
+    const after = computeFeatures(ledger, NOW, creditRecordFor(rohit), [postpaidEmi()]);
 
     expect(after.existingEmiOutflow).toBe(before.existingEmiOutflow + 16_667);
     expect(after.affordabilityCapacity).toBe(before.affordabilityCapacity - Math.round(16_667 * 0.4));

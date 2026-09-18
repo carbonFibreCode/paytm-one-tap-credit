@@ -7,7 +7,7 @@
  * `lib/personas.ts` builds on top of this rather than restating it.
  */
 
-import type { Language } from './types';
+import type { Language } from '../types';
 
 export interface Person {
   userId: string;

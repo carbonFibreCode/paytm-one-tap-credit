@@ -17,7 +17,7 @@ import { randomBytes } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { db, withTimeout } from '../db/client';
 import { insertIntentSchema, paymentIntents, type IntentRow } from '../db/schema';
-import { getMerchant, MERCHANTS, type Merchant } from '../merchants';
+import { getMerchant, MERCHANTS, type Merchant } from '../fixtures/merchants';
 import { buildUpiPayload, handleFor, merchantCategoryCode, parseUpiPayload, upiVpa } from '../upi';
 import { log } from '../log';
 import { signIntent, verifyIntent } from './sign';

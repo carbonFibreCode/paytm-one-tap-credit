@@ -9,7 +9,7 @@
 import { NextResponse } from 'next/server';
 import { buildGateContext } from '@/lib/engine/decide';
 import { runGates } from '@/lib/engine/gates';
-import { getMerchant } from '@/lib/merchants';
+import { getMerchant } from '@/lib/fixtures/merchants';
 import { gatesBody } from '@/lib/api/schemas';
 import { ApiError, jsonRoute, unknown } from '@/lib/api/route';
 
