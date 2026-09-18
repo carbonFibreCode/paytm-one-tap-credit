@@ -14,7 +14,7 @@ export function SuccessScreen() {
   return (
     <div className="flex h-full flex-col">
 
-      <div className="scroll-slim flex-1 overflow-y-auto px-5 pb-4 pt-6">
+      <div className="scroll-slim pt-safe flex-1 overflow-y-auto px-5 pb-4">
         <div className="flex flex-col items-center text-center">
           <AnimatedCheck />
           <motion.h2

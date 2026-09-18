@@ -69,7 +69,7 @@ export function HomeScreen() {
     <div className="flex h-full flex-col">
       {/* --- header --- */}
       <div className="shrink-0 bg-gradient-to-b from-brand-deep to-[#071736]">
-        <div className="flex items-center gap-3 px-4 pb-3 pt-1">
+        <div className="pt-safe flex items-center gap-3 px-4 pb-3">
           <button
             type="button"
             onClick={() => go('persona')}

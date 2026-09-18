@@ -41,7 +41,7 @@ export function AppBar({
   right?: ReactNode;
 }) {
   return (
-    <div className="flex shrink-0 items-center gap-3 px-5 py-3">
+    <div className="pt-safe flex shrink-0 items-center gap-3 px-5 pb-3">
       {onBack ? (
         <button
           type="button"

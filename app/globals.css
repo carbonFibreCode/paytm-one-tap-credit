@@ -42,6 +42,22 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/**
+ * Top spacing for anything that sits at the head of a screen.
+ *
+ * Takes whichever is larger: a comfortable fixed gap, or the device's own safe
+ * area. That clears the simulated notch inside the phone frame on a laptop and
+ * the real notch or dynamic island on a phone, without hard-coding either.
+ */
+.pt-safe {
+  padding-top: max(1.5rem, env(safe-area-inset-top, 0px));
+}
+
+/* Keeps the bottom bar clear of the home indicator on gesture-nav phones. */
+.pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+}
+
 /* Thin, unobtrusive scrollbars inside the phone frame. */
 .scroll-slim {
   scrollbar-width: thin;

@@ -13,6 +13,9 @@ export const viewport: Viewport = {
   initialScale: 1,
   // The demo is a phone UI; pinch-zooming it mid-presentation helps nobody.
   maximumScale: 1,
+  // Required for env(safe-area-inset-*) to report real values — without it the
+  // insets are always 0 and headers sit under the notch.
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {

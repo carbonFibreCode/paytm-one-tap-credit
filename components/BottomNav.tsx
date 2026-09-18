@@ -23,7 +23,7 @@ export function BottomNav({ active }: { active: 'home' | 'scanner' | 'history' }
 
   return (
     <div className="relative shrink-0 border-t border-line bg-surface">
-      <div className="grid grid-cols-5 items-end px-2 pb-2 pt-2">
+      <div className="pb-safe grid grid-cols-5 items-end px-2 pt-2">
         {items.slice(0, 2).map((item) => (
           <NavItem key={item.label} {...item} active={active} onGo={go} />
         ))}

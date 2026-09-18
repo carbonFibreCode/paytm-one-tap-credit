@@ -124,7 +124,7 @@ export function ScannerScreen() {
 
   return (
     <div className="flex h-full flex-col bg-black">
-      <div className="flex shrink-0 items-center gap-3 px-4 py-2">
+      <div className="pt-safe flex shrink-0 items-center gap-3 px-4 pb-2">
         <button
           type="button"
           onClick={() => go('home')}
