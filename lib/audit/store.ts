@@ -12,12 +12,17 @@
  *
  * Serverless hosts give you a read-only, ephemeral filesystem, so every write is
  * mirrored into an in-process buffer and file errors are swallowed. On Vercel
- * the buffer is what answers reads — it survives a warm lambda but not a cold
- * start, which is exactly why Cognee is the durable store in production.
+ * the buffer survives a warm lambda but not a cold start — which is the gap the
+ * database closes. When `DATABASE_URL` is set, every record is also written to
+ * Postgres and reads come from there first; the file and buffer stay as the
+ * fallback, so an unreachable database degrades to exactly what ran before.
  */
 
 import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
+import type { DecisionTrace } from '../types';
+import { dbConfigured } from '../db/client';
+import { insertRecord, readRecordsFromDb } from './db';
 
 const DATA_DIR = path.join(process.cwd(), '.data');
 const LOG_PATH = path.join(DATA_DIR, 'decisions.jsonl');
@@ -43,15 +48,40 @@ export interface AuditRecord {
   /** For outcome records. */
   outcome?: 'shown' | 'accepted' | 'declined';
   nudgeSource?: string;
+  /** Full gates/factors breakdown, kept so an old decision stays explainable. */
+  trace?: DecisionTrace;
+  engineVersion?: string;
 }
 
 /** Mirrors the file so reads still work where the filesystem is read-only. */
 const buffer: AuditRecord[] = [];
 let fileWritable = true;
 
+/** Where the last read was answered from — surfaced by the health endpoint. */
+export type AuditBackend = 'database' | 'file' | 'memory';
+let lastBackend: AuditBackend = 'memory';
+export function auditBackend(): AuditBackend {
+  return dbConfigured() ? lastBackend : fileWritable ? 'file' : 'memory';
+}
+
 export async function appendRecord(record: AuditRecord): Promise<void> {
   buffer.push(record);
 
+  // Database and file are written together; neither failing stops the other.
+  await Promise.allSettled([appendToDb(record), appendToFile(record)]);
+}
+
+async function appendToDb(record: AuditRecord): Promise<void> {
+  if (!dbConfigured()) return;
+  try {
+    await insertRecord(record);
+  } catch (error) {
+    // Logging is a side-effect. Report it, keep the file copy, never rethrow.
+    console.warn('[audit] database write failed:', (error as Error).message);
+  }
+}
+
+async function appendToFile(record: AuditRecord): Promise<void> {
   if (!fileWritable) return;
   try {
     await mkdir(DATA_DIR, { recursive: true });
@@ -63,6 +93,17 @@ export async function appendRecord(record: AuditRecord): Promise<void> {
 }
 
 export async function readRecords(): Promise<AuditRecord[]> {
+  if (dbConfigured()) {
+    try {
+      const records = await readRecordsFromDb();
+      lastBackend = 'database';
+      return records;
+    } catch (error) {
+      console.warn('[audit] database read failed, using local trail:', (error as Error).message);
+      lastBackend = fileWritable ? 'file' : 'memory';
+    }
+  }
+
   if (!fileWritable) return [...buffer];
 
   try {

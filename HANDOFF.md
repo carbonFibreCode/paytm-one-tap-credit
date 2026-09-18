@@ -130,7 +130,7 @@ the `active` field; activation silently fails unless `activeVersionId` matches
 
 ---
 
-## Where data lives — relevant to the database work
+## Where data lives
 
 | Data | Volume | Where now | Durable on Vercel? |
 |---|---|---|---|
@@ -138,17 +138,37 @@ the `active` field; activation silently fails unless `activeVersionId` matches
 | Transaction ledgers | ~250 rows each | **generated at runtime from a seed** | n/a — never stored |
 | Nudge history (frequency cap) | tiny | browser `localStorage` | client-owned by design |
 | Payment history | small | browser `localStorage` | client-owned |
-| Decision audit trail | grows | `.data/decisions.jsonl` + in-memory buffer | **no — lost on cold start** |
-| Offer outcomes (memory) | tiny | Cognee Cloud | yes |
+| Decision audit trail | grows | **Neon Postgres `decisions`**, mirrored to `.data/decisions.jsonl` | **yes** with `DATABASE_URL` |
+| Offer outcomes | tiny | **Neon Postgres `nudge_events`** + Cognee Cloud for recall | yes |
 
-**The two gaps a database would close** are the last two rows. The largest
-dataset in the system is reproducible from a user id, which is why nothing has
-needed a database so far.
+### Database — Phase 0 done (18 Sep)
 
-If adding one: **Upstash Redis** is the least ceremony — HTTP-based, so it works
-from Vercel functions *and* directly from n8n nodes with no connection pooling.
-Neon Postgres or Mongo Atlas also fine. Cognee is **not** a database and should
-not be used as the system of record.
+Neon project `autumn-poetry-48959969` (ap-southeast-1, Postgres 18), linked to
+this directory with `neon link` — that command is also how a fresh clone gets
+`DATABASE_URL` into `.env.local`. Neon Postgres over HTTP, Drizzle schema + migrations in `lib/db/` and `drizzle/`,
+`drizzle-zod` validating rows at the boundary. Wired behind `appendRecord()` /
+`readRecords()` in `lib/audit/store.ts`, so no caller changed and n8n's audit
+nodes are untouched. `DATABASE_URL` unset → identical behaviour to before.
+
+Rules that shaped it, and should shape the next phases:
+
+- **The engine never reads the database.** Anything the engine needs from it
+  arrives as an explicit input, the way `nudgeHistory` and `timestamp` already
+  do. `lib/engine/` changed by zero lines.
+- **A database failure can never fail a payment.** Writes are best-effort
+  alongside the file; reads have an 800ms budget and fall back to the local trail.
+- **`decisions` is append-only** — a trigger rejects UPDATE/DELETE. Slide-worthy.
+- **Money is `integer` rupees.** Never `numeric(_,2)`; the no-cost EMI rounding
+  depends on integer arithmetic.
+- **`transactionId` is deterministic** (`txn_<user>_<merchant>_<amount>`), so it
+  is stored as `decision_key`, indexed, *not* the primary key. Two scans of the
+  same amount are two rows.
+
+Planned next: **Phase 1** — `payments`, `credit_accounts`, `emi_installments`,
+and live obligations fed into `buildProfile()` so accepting an offer tightens
+the next affordability check. **Phase 2** — `payment_intents` so the QR carries
+an intent id (store the intent, never the image). Full design in the 18 Sep
+session notes.
 
 ---
 
@@ -203,6 +223,10 @@ Showing restraint is the credibility beat. Full 9-step script in `README.md`.
    white-screen the demo
 8. Measured production decision latency is ~325ms warm — worth surfacing on the
    nudge card as a demonstrated claim
+9. **`DATABASE_URL` on Vercel** — the Neon project exists
+   (`autumn-poetry-48959969`, ap-southeast-1, branch `production`), migrations are
+   applied and the local app writes to it. The deployed app only does once the
+   pooled URL is in Vercel's env — check `/api/health` → `database.reachable`
 
 ---
 

@@ -28,6 +28,9 @@ const body = z.object({
   latencyMs: z.number().nullable().optional(),
   outcome: z.enum(['shown', 'accepted', 'declined']).optional(),
   nudgeSource: z.string().optional(),
+  /** The engine's own breakdown, passed through whole; shape is the engine's to define. */
+  trace: z.custom<AuditRecord['trace']>((value) => typeof value === 'object' && value !== null).optional(),
+  engineVersion: z.string().optional(),
   /** Supplied by the caller so the entry reflects when the decision happened. */
   at: z.string().optional(),
 });

@@ -29,40 +29,47 @@ cd cognee-service && npm start    # http://localhost:4000  (optional)
 
 This is the part worth being precise about.
 
-| Data | Volume | Where it lives now | Needs a database? |
+| Data | Volume | Where it lives | Durable on Vercel? |
 |---|---|---|---|
-| 6 personas, 8 merchants | tiny | Code (`lib/people.ts`, `lib/personas.ts`) | **No** — demo fixtures |
-| Transaction ledgers | ~250 rows each | Generated at runtime from a seed | **No** — deterministic, never stored |
-| Nudge history (frequency cap) | tiny | Browser `localStorage` | **No** — client owns it by design |
-| Decision audit trail | grows | `.data/decisions.jsonl` | **Only for cloud** |
-| Offer outcomes (memory) | tiny | `cognee-service/.data/outcomes.json` | **Only for cloud** |
+| 6 personas, 8 merchants | tiny | Code (`lib/people.ts`, `lib/personas.ts`) | n/a — demo fixtures |
+| Transaction ledgers | ~250 rows each | Generated at runtime from a seed | n/a — deterministic, never stored |
+| Nudge history (frequency cap) | tiny | Browser `localStorage` | client owns it by design |
+| Decision audit trail | grows | **Neon Postgres** (`decisions`), mirrored to `.data/decisions.jsonl` | **yes** when `DATABASE_URL` is set |
+| Offer outcomes | tiny | **Neon Postgres** (`nudge_events`) + Cognee for recall | **yes** |
 
-**Locally, nothing needs a database.** Files work, and the ledgers regenerate from
-a seed so there is nothing to persist.
+**Locally, nothing needs a database.** Without `DATABASE_URL` the trail is the file
+plus an in-memory buffer, exactly as before — the database is additive.
 
-**On Vercel, two of those break** — the filesystem is read-only and ephemeral, so
-writes fall back to an in-process buffer that survives a warm lambda but not a cold
-start. Good enough for a judge clicking through; not good enough for real use.
+**On Vercel the filesystem is read-only and ephemeral**, so without the database
+the trail survives a warm lambda but not a cold start. With it, every decision and
+outcome is written to Postgres and read back from there; the file stays as the
+fallback if Neon is slow or unreachable (800ms budget, then local trail).
 
-### Do you need Mongo / Cloudflare / a real DB?
+### The database
 
-**For the hackathon: no.** Adding a database the night before is another
-credential, another failure mode, and the demo runs locally where files work.
+Neon Postgres over HTTP (`@neondatabase/serverless`), Drizzle for the schema and
+migrations, Zod (via `drizzle-zod`) validating every row at the boundary. Two
+tables, both in `lib/db/schema.ts`:
 
-**If you want cloud durability anyway**, the fastest option is **Upstash Redis** —
-HTTP-based, so it works from Vercel functions *and* from n8n nodes with no
-connection pooling. Free tier, about five minutes:
+- `decisions` — one row per engine decision, `trace` kept whole as `jsonb`.
+  **Append-only:** a trigger rejects `UPDATE` and `DELETE` at the database.
+- `nudge_events` — shown / accepted / declined, linked to its decision.
 
 ```bash
-UPSTASH_REDIS_REST_URL=...
-UPSTASH_REDIS_REST_TOKEN=...
+# once per clone — links to the existing project and writes DATABASE_URL to .env.local
+neon link --project-id autumn-poetry-48959969 --branch production -y
+npm run db:migrate              # applies drizzle/*.sql (already applied on production)
+npm run db:studio               # browse the trail
+curl localhost:3000/api/health  # → database: { configured, reachable, decisions, outcomes }
 ```
 
-Tell me and I'll swap the audit store's two functions over. Mongo Atlas and Neon
-Postgres both work too; Redis is just the least ceremony for append-only data.
+`vercel.json` pins functions to `sin1` so the app and the database share a
+region; cross-region every query costs a ~250ms round trip.
 
-**Cognee is not a database.** It is a memory and knowledge-graph layer. Using it as
-your system of record would mean running graph queries to count rows.
+Schema changes: edit `lib/db/schema.ts`, `npm run db:generate`, commit the SQL.
+
+**Cognee is not a database.** It is a memory and knowledge-graph layer; the
+counts that move a score come from `nudge_events`, not from the graph.
 
 ---
 
@@ -190,6 +197,9 @@ COGNEE_DATASET=one-tap-credit
 # n8n — without these, the app calls /api/decide directly
 NEXT_PUBLIC_N8N_WEBHOOK_URL=
 NEXT_PUBLIC_N8N_OUTCOME_WEBHOOK_URL=
+
+# Neon Postgres — without it, the audit trail is the local file + buffer
+DATABASE_URL=
 ```
 
 In the **sidecar** (`cognee-service/`), not the app:
