@@ -49,3 +49,5 @@ CLAUDE.md
 n8n/cloud/
 cognee-service/node_modules/
 cognee-service/.data/
+cognee-service/.env
+n8n/.env.n8n

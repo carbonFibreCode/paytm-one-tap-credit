@@ -27,8 +27,19 @@
 
 import { createServer } from 'node:http';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+// Load `.env` beside this file, so credentials live on disk rather than in a
+// shell command that would end up in scrollback.
+const ENV_FILE = new URL('.env', import.meta.url);
+if (existsSync(ENV_FILE)) {
+  for (const line of readFileSync(ENV_FILE, 'utf8').split('\n')) {
+    const match = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*)\s*$/);
+    if (match && !process.env[match[1]]) process.env[match[1]] = match[2].replace(/^["']|["']$/g, '');
+  }
+}
 
 const PORT = Number(process.env.PORT ?? 4000);
 const DATASET = process.env.COGNEE_DATASET ?? 'one-tap-credit';
