@@ -168,6 +168,31 @@ describe('navigation', () => {
   });
 });
 
+describe('production vs explain view', () => {
+  test('opens in production view, so the app looks shipped rather than instrumented', () => {
+    expect(initialState.explainMode).toBe(false);
+  });
+
+  test('toggles explicitly and flips without an argument', () => {
+    expect(apply(initialState, { type: 'toggleExplain', on: true }).explainMode).toBe(true);
+    expect(apply(initialState, { type: 'toggleExplain' }).explainMode).toBe(true);
+    expect(
+      apply(initialState, { type: 'toggleExplain', on: true }, { type: 'toggleExplain' })
+        .explainMode,
+    ).toBe(false);
+  });
+
+  test('survives navigation and a persona switch \u2014 unlike the sheets, it is a mode, not a panel', () => {
+    const explaining = apply(initialState, { type: 'toggleExplain', on: true });
+    const moved = apply(
+      explaining,
+      { type: 'go', screen: 'checkout' },
+      { type: 'setUser', userId: 'u_aman' },
+    );
+    expect(moved.explainMode).toBe(true);
+  });
+});
+
 describe('copy loading', () => {
   test('a nudge decision with no copy yet is marked as loading', () => {
     expect(decided.nudgeCopyLoading).toBe(true);

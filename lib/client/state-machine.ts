@@ -68,6 +68,13 @@ export interface State {
   drawerOpen: boolean;
   infoOpen: boolean;
   traceOpen: boolean;
+  /**
+   * Whether to show the instrumentation a real Paytm build would never carry:
+   * the engine strip on a withheld decision, the Sarvam latency badge, the demo
+   * entry point on checkout. Off by default so the app opens looking shipped \u2014
+   * a judge should meet the product first and the engine second.
+   */
+  explainMode: boolean;
   historyByUser: Record<string, NudgeHistoryEntry[]>;
   historyLoaded: boolean;
   /** Completed payments, newest last, per user. */
@@ -92,6 +99,7 @@ export type Action =
   | { type: 'toggleDrawer'; open?: boolean }
   | { type: 'toggleInfo'; open?: boolean }
   | { type: 'toggleTrace'; open?: boolean }
+  | { type: 'toggleExplain'; on?: boolean }
   | {
       type: 'historyLoaded';
       history: Record<string, NudgeHistoryEntry[]>;
@@ -122,6 +130,7 @@ export const initialState: State = {
   drawerOpen: false,
   infoOpen: false,
   traceOpen: false,
+  explainMode: false,
   historyByUser: {},
   historyLoaded: false,
   paymentsByUser: {},
@@ -228,6 +237,9 @@ export function reducer(state: State, action: Action): State {
 
     case 'toggleTrace':
       return { ...state, traceOpen: action.open ?? !state.traceOpen };
+
+    case 'toggleExplain':
+      return { ...state, explainMode: action.on ?? !state.explainMode };
 
     case 'historyLoaded':
       return {

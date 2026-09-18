@@ -127,7 +127,7 @@ describe('DecisionTrace', () => {
     const decision = decisionFor('u_priya', 'm_kroma', 50_000);
     expect(decision.blockedBy).toBe('AFFORDABILITY');
     render(<DecisionTrace decision={decision} />);
-    expect(screen.getByText('Blocked by Affordability')).not.toBeNull();
+    expect(screen.getByText('Blocked by affordability')).not.toBeNull();
   });
 
   test('every gate the engine ran is listed with its explanation', () => {

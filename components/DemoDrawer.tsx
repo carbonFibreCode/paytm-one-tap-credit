@@ -38,6 +38,8 @@ export function DemoDrawer() {
     selectMerchant,
     languageOverride,
     setLanguage,
+    explainMode,
+    toggleExplain,
     mode,
     setMode,
     n8nAvailable,
@@ -69,6 +71,22 @@ export function DemoDrawer() {
       }
     >
       <div className="scroll-slim flex-1 space-y-5 overflow-y-auto px-5 pb-6">
+        <Section title="View">
+          <div className="flex gap-1.5">
+            <Chip active={!explainMode} onClick={() => toggleExplain(false)} className="flex-1">
+              Production
+            </Chip>
+            <Chip active={explainMode} onClick={() => toggleExplain(true)} className="flex-1">
+              Explain
+            </Chip>
+          </div>
+          <p className="mt-2 text-[10px] leading-relaxed text-faint">
+            {explainMode
+              ? 'Showing the instrumentation \u2014 the engine strip on a withheld decision, and where the nudge copy came from.'
+              : 'What the user actually sees. A withheld decision leaves no trace on screen: silence is silence.'}
+          </p>
+        </Section>
+
         <Section title="Who is paying">
           <div className="grid grid-cols-2 gap-2">
             {PEOPLE.map((person) => (
