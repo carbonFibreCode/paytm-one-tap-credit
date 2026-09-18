@@ -16,8 +16,10 @@
  * EMI rounding was written to avoid.
  */
 
+import { relations } from 'drizzle-orm';
 import {
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -25,6 +27,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from 'drizzle-zod';
@@ -88,6 +91,91 @@ export const nudgeEvents = pgTable(
   (table) => [index('nudge_events_user_occurred_idx').on(table.userId, table.occurredAt)],
 );
 
+// --- money: payments and the credit they opened ------------------------------
+// This is the part of the system that did not exist before the database: what
+// happened *after* an offer was accepted. A credit account and its instalment
+// schedule are written in one batch with the payment, so there is never a
+// payment on credit without the schedule that repays it.
+
+export const paymentMethodEnum = pgEnum('payment_method', ['upi', 'wallet', 'postpaid', 'card']);
+export const creditProductEnum = pgEnum('credit_product', ['postpaid', 'card']);
+export const accountStatusEnum = pgEnum('account_status', ['active', 'closed']);
+export const installmentStatusEnum = pgEnum('installment_status', ['due', 'paid', 'late']);
+
+export const payments = pgTable(
+  'payments',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: text().notNull(),
+    merchantId: text().notNull(),
+    merchantName: text().notNull(),
+    /** The decision this payment answered, when there was one. */
+    decisionKey: text(),
+    amount: integer().notNull(),
+    method: paymentMethodEnum().notNull(),
+    partner: text(),
+    paidAt: timestamp({ withTimezone: true, mode: 'string' }).notNull(),
+  },
+  (table) => [index('payments_user_paid_idx').on(table.userId, table.paidAt)],
+);
+
+export const creditAccounts = pgTable(
+  'credit_accounts',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: text().notNull(),
+    paymentId: uuid()
+      .notNull()
+      .references(() => payments.id),
+    product: creditProductEnum().notNull(),
+    partner: text().notNull(),
+    principal: integer().notNull(),
+    tenureMonths: integer().notNull(),
+    /** Total interest over the tenure; zero on a no-cost plan. */
+    interest: integer().notNull().default(0),
+    noCost: boolean().notNull().default(false),
+    status: accountStatusEnum().notNull().default('active'),
+    openedAt: timestamp({ withTimezone: true, mode: 'string' }).notNull(),
+  },
+  (table) => [index('credit_accounts_user_status_idx').on(table.userId, table.status)],
+);
+
+export const emiInstallments = pgTable(
+  'emi_installments',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    accountId: uuid()
+      .notNull()
+      .references(() => creditAccounts.id),
+    /** 1-based position in the schedule. */
+    seq: integer().notNull(),
+    dueDate: date({ mode: 'string' }).notNull(),
+    amount: integer().notNull(),
+    status: installmentStatusEnum().notNull().default('due'),
+    paidAt: timestamp({ withTimezone: true, mode: 'string' }),
+  },
+  (table) => [unique('emi_installments_account_seq').on(table.accountId, table.seq)],
+);
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  creditAccount: one(creditAccounts, {
+    fields: [payments.id],
+    references: [creditAccounts.paymentId],
+  }),
+}));
+
+export const creditAccountsRelations = relations(creditAccounts, ({ one, many }) => ({
+  payment: one(payments, { fields: [creditAccounts.paymentId], references: [payments.id] }),
+  installments: many(emiInstallments),
+}));
+
+export const emiInstallmentsRelations = relations(emiInstallments, ({ one }) => ({
+  account: one(creditAccounts, {
+    fields: [emiInstallments.accountId],
+    references: [creditAccounts.id],
+  }),
+}));
+
 // --- validation at the database boundary ------------------------------------
 // Derived from the tables so the two can never drift. Refinements add what a
 // column type cannot say: an ISO timestamp, a whole-rupee amount, a 0–100 score.
@@ -113,6 +201,35 @@ export const insertNudgeEventSchema = createInsertSchema(nudgeEvents, {
   userId: (schema) => schema.min(1),
   occurredAt: () => isoTimestamp,
 });
+
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'must be a YYYY-MM-DD date');
+
+export const insertPaymentSchema = createInsertSchema(payments, {
+  userId: (schema) => schema.min(1),
+  merchantId: (schema) => schema.min(1),
+  merchantName: (schema) => schema.min(1),
+  amount: (schema) => schema.positive(),
+  paidAt: () => isoTimestamp,
+});
+
+export const insertCreditAccountSchema = createInsertSchema(creditAccounts, {
+  userId: (schema) => schema.min(1),
+  partner: (schema) => schema.min(1),
+  principal: (schema) => schema.positive(),
+  tenureMonths: (schema) => schema.min(1).max(36),
+  interest: (schema) => schema.nonnegative(),
+  openedAt: () => isoTimestamp,
+});
+
+export const insertInstallmentSchema = createInsertSchema(emiInstallments, {
+  seq: (schema) => schema.min(1),
+  amount: (schema) => schema.positive(),
+  dueDate: () => isoDate,
+});
+
+export type PaymentRow = typeof payments.$inferSelect;
+export type CreditAccountRow = typeof creditAccounts.$inferSelect;
+export type InstallmentRow = typeof emiInstallments.$inferSelect;
 
 export type DecisionRow = typeof decisions.$inferSelect;
 export type NewDecision = z.infer<typeof insertDecisionSchema>;

@@ -12,7 +12,7 @@
  * the demo.
  */
 
-import type { Decision, Instrument, Language, NudgeHistoryEntry } from '../types';
+import type { Decision, EmiOption, Instrument, Language, NudgeHistoryEntry } from '../types';
 
 const N8N_TIMEOUT_MS = 3_000;
 const DIRECT_TIMEOUT_MS = 8_000;
@@ -164,6 +164,44 @@ export async function requestNudgeText(params: NudgeTextParams): Promise<NudgeTe
  * a workflow, and a logging failure must never surface to the user. The outcome
  * is already persisted locally — this only feeds the audit trail and the digest.
  */
+export interface PaymentReport {
+  userId: string;
+  merchantId: string;
+  amount: number;
+  method: 'upi' | 'wallet' | 'postpaid' | 'card';
+  partner?: string;
+  tenure?: EmiOption;
+  /** The decision this payment answered, so the ledger can be joined to the trail. */
+  decisionKey?: string;
+  at: string;
+}
+
+/**
+ * Record the payment in the credit ledger. Same posture as `reportOutcome`:
+ * the success screen is already showing, and a ledger that is down changes
+ * only what the *next* decision knows.
+ */
+export function reportPayment(payment: PaymentReport): void {
+  void fetch('/api/payments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payment),
+    keepalive: true,
+  }).catch(() => {
+    // The local history already has it.
+  });
+}
+
+/** Demo reset — forget this user's payments and credit accounts on the server. */
+export function resetUserCredit(userId: string): void {
+  void fetch(`/api/payments?userId=${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+    keepalive: true,
+  }).catch(() => {
+    // Best effort; the drawer will show whatever the next profile read returns.
+  });
+}
+
 export function reportOutcome(outcome: {
   transactionId: string;
   userId: string;

@@ -28,7 +28,9 @@ import {
   n8nConfigured,
   requestDecision,
   reportOutcome,
+  reportPayment,
   requestNudgeText,
+  resetUserCredit,
   type OrchestrationMode,
   type ServedBy,
 } from './api';
@@ -268,9 +270,13 @@ function reducer(state: State, action: Action): State {
     }
 
     case 'clearHistory': {
+      // A reset is a reset: nudge history and payments both go, locally and on
+      // the server, so the next decision sees the persona as first shipped.
       const next = { ...state.historyByUser };
       delete next[action.userId];
-      return { ...clearDecision(state), historyByUser: next };
+      const payments = { ...state.paymentsByUser };
+      delete payments[action.userId];
+      return { ...clearDecision(state), historyByUser: next, paymentsByUser: payments };
     }
 
     default:
@@ -521,35 +527,54 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'dismissNudge' });
       },
       payNormally: () => {
-        dispatch({
-          type: 'pay',
-          payment: {
-            amount: state.amount,
-            merchantName: merchant?.name ?? 'Merchant',
-            merchantId: state.merchantId,
-            method: state.instrument === 'wallet' ? 'wallet' : 'upi',
-            at: new Date().toISOString(),
-          },
+        const payment: PaymentRecord = {
+          amount: state.amount,
+          merchantName: merchant?.name ?? 'Merchant',
+          merchantId: state.merchantId,
+          method: state.instrument === 'wallet' ? 'wallet' : 'upi',
+          at: new Date().toISOString(),
+        };
+        dispatch({ type: 'pay', payment });
+        reportPayment({
+          userId: state.userId,
+          merchantId: state.merchantId,
+          amount: payment.amount,
+          method: payment.method,
+          decisionKey: state.decision?.transactionId,
+          at: payment.at!,
         });
       },
       confirmCredit: (tenure) => {
         const offer = state.decision?.offer;
-        dispatch({
-          type: 'pay',
-          payment: {
-            amount: state.amount,
-            merchantName: merchant?.name ?? 'Merchant',
-            merchantId: state.merchantId,
-            method: offer?.product ?? 'postpaid',
-            partner: offer?.partner,
-            tenure,
-            at: new Date().toISOString(),
-          },
+        const payment: PaymentRecord = {
+          amount: state.amount,
+          merchantName: merchant?.name ?? 'Merchant',
+          merchantId: state.merchantId,
+          method: offer?.product ?? 'postpaid',
+          partner: offer?.partner,
+          tenure,
+          at: new Date().toISOString(),
+        };
+        dispatch({ type: 'pay', payment });
+        // This is the write that makes the next decision different: the
+        // account and its schedule now exist, and affordability will see them.
+        reportPayment({
+          userId: state.userId,
+          merchantId: state.merchantId,
+          amount: payment.amount,
+          method: payment.method,
+          partner: payment.partner,
+          tenure,
+          decisionKey: state.decision?.transactionId,
+          at: payment.at!,
         });
       },
 
       simulateHistory: (entry) => dispatch({ type: 'recordOutcome', userId: state.userId, entry }),
-      clearHistory: () => dispatch({ type: 'clearHistory', userId: state.userId }),
+      clearHistory: () => {
+        dispatch({ type: 'clearHistory', userId: state.userId });
+        resetUserCredit(state.userId);
+      },
     };
   }, [state, history, recordOutcome]);
 

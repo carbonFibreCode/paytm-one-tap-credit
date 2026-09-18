@@ -36,6 +36,7 @@ This is the part worth being precise about.
 | Nudge history (frequency cap) | tiny | Browser `localStorage` | client owns it by design |
 | Decision audit trail | grows | **Neon Postgres** (`decisions`), mirrored to `.data/decisions.jsonl` | **yes** when `DATABASE_URL` is set |
 | Offer outcomes | tiny | **Neon Postgres** (`nudge_events`) + Cognee for recall | **yes** |
+| Payments, credit accounts, EMI schedules | small | **Neon Postgres** (`payments`, `credit_accounts`, `emi_installments`); payments mirrored to `localStorage` | **yes** — and they feed the next decision |
 
 **Locally, nothing needs a database.** Without `DATABASE_URL` the trail is the file
 plus an in-memory buffer, exactly as before — the database is additive.
@@ -54,6 +55,10 @@ tables, both in `lib/db/schema.ts`:
 - `decisions` — one row per engine decision, `trace` kept whole as `jsonb`.
   **Append-only:** a trigger rejects `UPDATE` and `DELETE` at the database.
 - `nudge_events` — shown / accepted / declined, linked to its decision.
+- `payments` → `credit_accounts` → `emi_installments` — written together in one
+  batch when a payment goes on credit. Active accounts are read back on every
+  decision as `LiveCredit` and lower the affordability capacity and the
+  available limit. `DELETE /api/payments?userId=` is the demo reset.
 
 ```bash
 # once per clone — links to the existing project and writes DATABASE_URL to .env.local

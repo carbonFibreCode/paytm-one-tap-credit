@@ -152,13 +152,33 @@ export function decide(input: DecideInput): Decision {
   }
 
   // --- build the offer ---
-  const { product, rationale } = selectProduct(fundingProducts, amount, eligibleProducts);
-  const allTenures = tenuresByProduct.get(product.id) ?? [];
   const capacity = profile.features.affordabilityCapacity;
-  const affordable = affordableTenures(allTenures, capacity);
+  const preferred = selectProduct(fundingProducts, amount, eligibleProducts);
 
-  // The affordability gate guarantees at least one plan fits; keep the cheapest
-  // as a floor in case rounding leaves the list empty.
+  // The affordability gate passed on the cheapest plan across *all* funding
+  // products. The preferred product is not necessarily the one carrying it: a
+  // user near capacity may only fit the card's 12-month plan, not Postpaid's
+  // 6-month one. Offering a plan above capacity would contradict the gate, so
+  // switch to whichever product actually has a plan that fits.
+  const fits = (candidate: ProductState) =>
+    affordableTenures(tenuresByProduct.get(candidate.id) ?? [], capacity);
+  const alternative =
+    fits(preferred.product).length === 0
+      ? fundingProducts.find((candidate) => candidate.id !== preferred.product.id && fits(candidate).length > 0)
+      : undefined;
+  const { product, rationale } = alternative
+    ? {
+        product: alternative,
+        rationale: `${alternative.partner} selected — every ${preferred.product.partner} plan for ${rupees(
+          amount,
+        )} exceeds ${rupees(capacity)}/month of assessed capacity; ${alternative.partner} offers a longer tenure that fits`,
+      }
+    : preferred;
+  const allTenures = tenuresByProduct.get(product.id) ?? [];
+  const affordable = fits(product);
+
+  // Unreachable while the gate and `fits` agree; kept as a floor so a rounding
+  // edge can never produce an empty offer.
   const tenures =
     affordable.length > 0
       ? affordable

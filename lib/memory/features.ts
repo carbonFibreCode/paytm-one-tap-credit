@@ -121,11 +121,18 @@ export function detectRecurringObligations(entries: LedgerEntry[]): RecurringObl
     .sort((a, b) => b.amount - a.amount);
 }
 
-/** Roll a ledger up into the feature vector the engine consumes. */
+/**
+ * Roll a ledger up into the feature vector the engine consumes.
+ *
+ * `liveObligations` are credit accounts this system itself opened — too new to
+ * show up as three months of repeated charges, but every bit as real. They join
+ * the detected ones so a loan taken a minute ago tightens the next check.
+ */
 export function computeFeatures(
   entries: LedgerEntry[],
   asOf: string,
   creditRecord: CreditRecord,
+  liveObligations: RecurringObligation[] = [],
 ): BehaviouralFeatures {
   const asOfDate = asOf.slice(0, 10);
   const debits = entries.filter((entry) => entry.direction === 'debit');
@@ -135,7 +142,10 @@ export function computeFeatures(
   const accountAgeDays = entries.length === 0 ? 0 : daysBetween(entries[0].date, asOfDate);
 
   const { avgMonthlyInflow, inflowRegularity } = detectSalary(entries);
-  const detectedObligations = detectRecurringObligations(entries);
+  const detectedObligations = [
+    ...detectRecurringObligations(entries),
+    ...liveObligations.map((obligation) => ({ ...obligation, source: 'account' as const })),
+  ];
 
   const existingEmiOutflow = sum(
     detectedObligations.filter((o) => o.category === 'emi').map((o) => o.amount),

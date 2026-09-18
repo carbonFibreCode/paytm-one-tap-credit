@@ -62,6 +62,25 @@ export interface RecurringObligation {
   category: LedgerCategory;
   /** How many distinct months this charge was seen in. */
   occurrences: number;
+  /**
+   * `ledger` when detected from repeated charges; `account` when it is a live
+   * credit account this system opened. Absent means ledger.
+   */
+  source?: 'ledger' | 'account';
+}
+
+/**
+ * What the credit ledger says this user is carrying *right now*.
+ *
+ * Read from the database by the caller and handed to the profile builder as
+ * an explicit input — the engine never reaches for it itself, which is what
+ * keeps a decision reproducible from its inputs alone.
+ */
+export interface LiveCredit {
+  /** One entry per active account: the next instalment due. */
+  obligations: RecurringObligation[];
+  /** Principal still to be repaid, per product — counts against the limit. */
+  outstanding: Record<ProductId, number>;
 }
 
 /**

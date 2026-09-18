@@ -24,7 +24,12 @@ export interface ProfilePayload {
     avgMonthlyInflow: number;
     fixedMonthlyOutflow: number;
     affordabilityCapacity: number;
-    detectedObligations: Array<{ merchant: string; amount: number; occurrences: number }>;
+    detectedObligations: Array<{
+      merchant: string;
+      amount: number;
+      occurrences: number;
+      source?: 'ledger' | 'account';
+    }>;
   };
   products: ProductState[];
   ledger: { total: number; recent: LedgerEntry[] };

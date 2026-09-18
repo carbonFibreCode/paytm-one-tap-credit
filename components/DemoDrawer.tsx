@@ -203,7 +203,7 @@ export function DemoDrawer() {
                     onClick={clearHistory}
                     className="rounded-lg border border-line bg-elevated px-2 py-1 text-[11px] text-muted transition hover:text-body"
                   >
-                    Clear ({history.length})
+                    Reset user ({history.length})
                   </button>
                 </div>
               </Section>
@@ -244,14 +244,17 @@ function MemoryPanel({ profile }: { profile: ProfilePayload }) {
       {features.detectedObligations.length > 0 ? (
         <div>
           <p className="mb-1 text-[10px] font-medium text-muted">
-            Recurring charges detected from the ledger
+            Recurring charges — detected from the ledger, or opened here
           </p>
           <ul className="space-y-0.5 text-[10px] text-faint">
             {features.detectedObligations.map((obligation) => (
               <li key={obligation.merchant} className="flex justify-between gap-2">
                 <span className="truncate">{obligation.merchant}</span>
                 <span className="shrink-0 tabular-nums">
-                  {formatINR(obligation.amount)} × {obligation.occurrences} months
+                  {formatINR(obligation.amount)}
+                  {obligation.source === 'account'
+                    ? ' · live account'
+                    : ` × ${obligation.occurrences} months`}
                 </span>
               </li>
             ))}

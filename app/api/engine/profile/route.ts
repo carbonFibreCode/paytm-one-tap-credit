@@ -11,6 +11,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { buildProfileWithLedger, getPersona } from '@/lib/personas';
 import { badRequest } from '@/lib/api/steps';
+import { liveCreditOrEmpty } from '@/lib/credit/store';
 
 const body = z.object({
   userId: z.string().min(1),
@@ -39,12 +40,14 @@ export async function POST(request: Request) {
   }
 
   const asOf = parsed.data.timestamp ?? new Date().toISOString();
-  const { profile, ledger } = buildProfileWithLedger(persona, asOf);
+  const live = await liveCreditOrEmpty(parsed.data.userId);
+  const { profile, ledger } = buildProfileWithLedger(persona, asOf, live);
 
   return NextResponse.json({
     stage: 'profile',
     asOf,
     profile,
+    liveCredit: live,
     ledgerRows: ledger.length,
     ...(parsed.data.includeLedger ? { ledger: ledger.slice(-40).reverse() } : {}),
   });

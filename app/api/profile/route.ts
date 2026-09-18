@@ -9,6 +9,7 @@
 import { NextResponse } from 'next/server';
 import { buildProfileWithLedger, getPersona } from '@/lib/personas';
 import { personOrDefault, PEOPLE } from '@/lib/people';
+import { liveCreditOrEmpty } from '@/lib/credit/store';
 
 /** Most recent rows only — enough to show the pattern without shipping 250 entries. */
 const LEDGER_PAGE_SIZE = 40;
@@ -35,10 +36,12 @@ export async function GET(request: Request) {
   }
 
   const now = new Date().toISOString();
-  const { profile, ledger } = buildProfileWithLedger(persona, now);
+  const live = await liveCreditOrEmpty(userId);
+  const { profile, ledger } = buildProfileWithLedger(persona, now, live);
   const person = personOrDefault(userId);
 
   return NextResponse.json({
+    liveCredit: live,
     userId: profile.userId,
     displayName: profile.displayName,
     preferredLanguage: profile.preferredLanguage,

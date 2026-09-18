@@ -5,7 +5,7 @@ import { useState } from 'react';
 import type { EmiOption } from '@/lib/types';
 import { useApp } from '@/lib/client/state';
 import { formatINR, formatShortDate } from '@/lib/format';
-import { addMonths } from '@/lib/dates';
+import { buildSchedule } from '@/lib/engine/emi';
 import { AppBar, Pill } from '../Chrome';
 
 export function ApprovedScreen() {
@@ -167,10 +167,5 @@ export function Schedule({ tenure }: { tenure: EmiOption }) {
   );
 }
 
-export function buildSchedule(tenure: EmiOption) {
-  return Array.from({ length: tenure.months }, (_, index) => ({
-    index: index + 1,
-    date: addMonths(tenure.firstDueDate, index),
-    amount: index === tenure.months - 1 ? tenure.lastEmi : tenure.emi,
-  }));
-}
+// Shared with the success screen; the schedule itself lives with the EMI maths.
+export { buildSchedule };

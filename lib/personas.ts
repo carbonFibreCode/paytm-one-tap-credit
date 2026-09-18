@@ -8,7 +8,7 @@
  * underwriting, only the decision layer that sits on top of it.
  */
 
-import type { ProductState, UserProfile } from './types';
+import type { LiveCredit, ProductState, UserProfile } from './types';
 import { personOrDefault } from './people';
 import { generateLedger, type PersonaSpec } from './memory/ledger';
 import { computeFeatures, type CreditRecord } from './memory/features';
@@ -278,13 +278,28 @@ export function getPersona(userId: string): Persona | undefined {
   return PERSONAS.find((persona) => persona.spec.userId === userId);
 }
 
+/** What a user with no accounts opened through this system is carrying. */
+export const NO_LIVE_CREDIT: LiveCredit = {
+  obligations: [],
+  outstanding: { postpaid: 0, card: 0 },
+};
+
 /**
  * Assemble a full profile: generate the ledger, derive features from it, then
  * derive the eligibility signal from those features.
+ *
+ * `live` is whatever credit this system has already extended — supplied by the
+ * caller, never read here, so the function stays as pure as the engine that
+ * consumes it. It lowers the affordability capacity and the available limit;
+ * it never touches eligibility.
  */
-export function buildProfile(persona: Persona, asOf: string): UserProfile {
+export function buildProfile(
+  persona: Persona,
+  asOf: string,
+  live: LiveCredit = NO_LIVE_CREDIT,
+): UserProfile {
   const ledger = generateLedger(persona.spec, asOf);
-  const features = computeFeatures(ledger, asOf, persona.credit);
+  const features = computeFeatures(ledger, asOf, persona.credit, live.obligations);
   const { score, breakdown } = deriveEligibilitySignal(features);
 
   const person = personOrDefault(persona.spec.userId);
@@ -296,7 +311,10 @@ export function buildProfile(persona: Persona, asOf: string): UserProfile {
     features,
     eligibilitySignal: score,
     eligibilityBreakdown: breakdown,
-    products: persona.products,
+    products: persona.products.map((product) => ({
+      ...product,
+      available: Math.max(0, product.available - (live.outstanding[product.id] ?? 0)),
+    })),
     optedOut: persona.optedOut,
     bankRejectionAt:
       persona.bankRejectionDaysAgo === undefined
@@ -306,9 +324,13 @@ export function buildProfile(persona: Persona, asOf: string): UserProfile {
 }
 
 /** Profile plus the underlying ledger, for the "show me the history" view. */
-export function buildProfileWithLedger(persona: Persona, asOf: string) {
+export function buildProfileWithLedger(
+  persona: Persona,
+  asOf: string,
+  live: LiveCredit = NO_LIVE_CREDIT,
+) {
   return {
-    profile: buildProfile(persona, asOf),
+    profile: buildProfile(persona, asOf, live),
     ledger: generateLedger(persona.spec, asOf),
   };
 }

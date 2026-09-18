@@ -164,11 +164,41 @@ Rules that shaped it, and should shape the next phases:
   is stored as `decision_key`, indexed, *not* the primary key. Two scans of the
   same amount are two rows.
 
-Planned next: **Phase 1** — `payments`, `credit_accounts`, `emi_installments`,
-and live obligations fed into `buildProfile()` so accepting an offer tightens
-the next affordability check. **Phase 2** — `payment_intents` so the QR carries
-an intent id (store the intent, never the image). Full design in the 18 Sep
-session notes.
+### Database — Phase 1 done (18 Sep): the credit ledger
+
+`payments`, `credit_accounts`, `emi_installments` in `lib/db/schema.ts`;
+`lib/credit/store.ts` writes all three in one Neon HTTP batch when a payment
+goes on credit, and refuses any schedule that does not sum to principal +
+interest exactly. `liveCredit(userId)` reads active accounts back as
+`LiveCredit` — the next instalment per account, and the unpaid balance per
+product.
+
+**This is the new demo beat.** `/api/decide`, `/api/profile` and
+`/api/engine/profile` read live credit and pass it to `buildProfile(persona,
+asOf, live)`; the profile builder adds the live instalments to
+`detectedObligations` (tagged `source: 'account'`) and subtracts the unpaid
+balance from `products[].available`. Rohit at Kroma ₹50,000: capacity
+₹27,348 → one plan → ₹20,681 → two → ₹14,014 (only the 6-month tenure left)
+→ four → `AFFORDABILITY`. Same user, same merchant, same amount — the engine
+declined because of what it just lent.
+
+The engine still reads no database, but live credit exposed one latent bug in
+`lib/engine/decide.ts`, now fixed: the affordability gate checks the cheapest
+plan across *all* funding products, while the offer was built for the
+preferred product only — so a user near capacity could be shown a Postpaid
+plan above the capacity the gate had just quoted. The offer now moves to the
+product that actually has a plan that fits, with the rationale saying why.
+`tests/credit.test.ts` asserts no offered instalment ever exceeds capacity.
+
+The client posts to `/api/payments` fire-and-forget from `confirmCredit()` and
+`payNormally()`; the demo drawer's **Reset user** clears nudge history *and*
+the user's payments and accounts, locally and on the server. The decision
+trail is never touched by a reset — it is append-only.
+
+`GET /api/payments?userId=u_rohit` shows the ledger with schedules.
+
+Planned next: **Phase 2** — `payment_intents` so the QR carries an intent id
+(store the intent, never the image). Full design in the 18 Sep session notes.
 
 ---
 

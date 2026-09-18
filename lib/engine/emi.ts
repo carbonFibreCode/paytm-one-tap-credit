@@ -111,3 +111,23 @@ export function lowestInstalment(options: EmiOption[]): number {
 export function affordableTenures(options: EmiOption[], capacity: number): EmiOption[] {
   return options.filter((option) => option.emi <= capacity);
 }
+
+export interface ScheduleRow {
+  /** 1-based position in the schedule. */
+  index: number;
+  /** ISO date the instalment falls due. */
+  date: string;
+  amount: number;
+}
+
+/**
+ * Expand a plan into its dated instalments. The last row carries the rounding
+ * remainder, so the rows always sum to `tenure.total` exactly.
+ */
+export function buildSchedule(tenure: EmiOption): ScheduleRow[] {
+  return Array.from({ length: tenure.months }, (_, index) => ({
+    index: index + 1,
+    date: addMonths(tenure.firstDueDate, index),
+    amount: index === tenure.months - 1 ? tenure.lastEmi : tenure.emi,
+  }));
+}

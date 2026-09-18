@@ -10,6 +10,7 @@ import { NextResponse } from 'next/server';
 import { decide } from '@/lib/engine/decide';
 import { buildProfile, getPersona } from '@/lib/personas';
 import { parseDecideRequest } from '@/lib/api/validate';
+import { liveCreditOrEmpty } from '@/lib/credit/store';
 
 export const ENGINE_VERSION = 'rules-v1';
 
@@ -30,7 +31,10 @@ export async function POST(request: Request) {
 
   const { request: decisionRequest, merchantCreditEnabled } = parsed.value;
   const persona = getPersona(decisionRequest.userId)!;
-  const profile = buildProfile(persona, decisionRequest.timestamp);
+  // Credit already extended here is an *input* to the profile, read by this
+  // route and handed over — the engine itself still touches no database.
+  const live = await liveCreditOrEmpty(decisionRequest.userId);
+  const profile = buildProfile(persona, decisionRequest.timestamp, live);
 
   const decision = decide({ request: decisionRequest, profile, merchantCreditEnabled });
 
