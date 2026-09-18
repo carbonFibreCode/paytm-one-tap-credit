@@ -19,7 +19,9 @@ export const POST = jsonRoute(offerBody, (input) => {
   // with the direct one about the product or the plans.
   const built = buildOffer({
     fundingProducts: fundingProducts as ProductState[],
-    eligibleProducts: (eligibleProducts.length > 0 ? eligibleProducts : fundingProducts) as ProductState[],
+    eligibleProducts: (eligibleProducts.length > 0
+      ? eligibleProducts
+      : fundingProducts) as ProductState[],
     amount,
     category: merchantCategory,
     timestamp: input.timestamp ?? new Date().toISOString(),

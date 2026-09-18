@@ -69,130 +69,122 @@ export function DemoDrawer() {
       }
     >
       <div className="scroll-slim flex-1 space-y-5 overflow-y-auto px-5 pb-6">
-              <Section title="Who is paying">
-                <div className="grid grid-cols-2 gap-2">
-                  {PEOPLE.map((person) => (
-                    <Chip
-                      key={person.userId}
-                      active={userId === person.userId}
-                      onClick={() => setUser(person.userId)}
-                      className="p-2 text-left"
-                    >
-                      {person.displayName}
-                    </Chip>
-                  ))}
-                </div>
-                {profile ? (
-                  <p className="mt-2 text-[10px] leading-relaxed text-faint">
-                    <span className="text-muted">{profile.tagline}.</span> {profile.demonstrates}.
-                  </p>
-                ) : null}
-              </Section>
+        <Section title="Who is paying">
+          <div className="grid grid-cols-2 gap-2">
+            {PEOPLE.map((person) => (
+              <Chip
+                key={person.userId}
+                active={userId === person.userId}
+                onClick={() => setUser(person.userId)}
+                className="p-2 text-left"
+              >
+                {person.displayName}
+              </Chip>
+            ))}
+          </div>
+          {profile ? (
+            <p className="mt-2 text-[10px] leading-relaxed text-faint">
+              <span className="text-muted">{profile.tagline}.</span> {profile.demonstrates}.
+            </p>
+          ) : null}
+        </Section>
 
-              <Section title="Transaction">
-                <div className="flex flex-wrap gap-1.5">
-                  {QUICK_AMOUNTS.map((value) => (
-                    <Chip key={value} active={amount === value} onClick={() => setAmount(value)}>
-                      {formatINR(value)}
-                    </Chip>
-                  ))}
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {MERCHANTS.map((merchant) => (
-                    <Chip
-                      key={merchant.id}
-                      active={merchantId === merchant.id}
-                      onClick={() => selectMerchant(merchant.id)}
-                    >
-                      {merchant.name}
-                    </Chip>
-                  ))}
-                </div>
-              </Section>
+        <Section title="Transaction">
+          <div className="flex flex-wrap gap-1.5">
+            {QUICK_AMOUNTS.map((value) => (
+              <Chip key={value} active={amount === value} onClick={() => setAmount(value)}>
+                {formatINR(value)}
+              </Chip>
+            ))}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {MERCHANTS.map((merchant) => (
+              <Chip
+                key={merchant.id}
+                active={merchantId === merchant.id}
+                onClick={() => selectMerchant(merchant.id)}
+              >
+                {merchant.name}
+              </Chip>
+            ))}
+          </div>
+        </Section>
 
-              <Section title="Nudge language">
-                <div className="flex flex-wrap gap-1.5">
-                  <Chip active={languageOverride === null} onClick={() => setLanguage(null)}>
-                    Auto
-                  </Chip>
-                  {(Object.keys(LANGUAGE_NAMES) as Language[]).map((code) => (
-                    <Chip
-                      key={code}
-                      active={languageOverride === code}
-                      onClick={() => setLanguage(code)}
-                    >
-                      {LANGUAGE_NAMES[code]}
-                    </Chip>
-                  ))}
-                </div>
-              </Section>
+        <Section title="Nudge language">
+          <div className="flex flex-wrap gap-1.5">
+            <Chip active={languageOverride === null} onClick={() => setLanguage(null)}>
+              Auto
+            </Chip>
+            {(Object.keys(LANGUAGE_NAMES) as Language[]).map((code) => (
+              <Chip key={code} active={languageOverride === code} onClick={() => setLanguage(code)}>
+                {LANGUAGE_NAMES[code]}
+              </Chip>
+            ))}
+          </div>
+        </Section>
 
-              <Section title="Orchestration">
-                <div className="flex gap-1.5">
-                  {(['orchestrated', 'direct'] as const).map((option) => (
-                    <Chip
-                      key={option}
-                      active={mode === option}
-                      onClick={() => setMode(option)}
-                      disabled={option === 'orchestrated' && !n8nAvailable}
-                      className="flex-1"
-                    >
-                      {option === 'orchestrated' ? 'via n8n' : 'direct API'}
-                    </Chip>
-                  ))}
-                </div>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-faint">
-                  {decisionMeta ? (
-                    <>
-                      <Pill tone={decisionMeta.servedBy === 'n8n' ? 'good' : 'neutral'}>
-                        served by {decisionMeta.servedBy}
-                      </Pill>
-                      <span>{decisionMeta.latencyMs}ms</span>
-                    </>
-                  ) : null}
-                  {!n8nAvailable ? <span>NEXT_PUBLIC_N8N_WEBHOOK_URL not set</span> : null}
-                </div>
-                {decisionMeta?.fallbackReason ? (
-                  <p className="mt-1 text-[10px] text-warn">{decisionMeta.fallbackReason}</p>
-                ) : null}
-              </Section>
+        <Section title="Orchestration">
+          <div className="flex gap-1.5">
+            {(['orchestrated', 'direct'] as const).map((option) => (
+              <Chip
+                key={option}
+                active={mode === option}
+                onClick={() => setMode(option)}
+                disabled={option === 'orchestrated' && !n8nAvailable}
+                className="flex-1"
+              >
+                {option === 'orchestrated' ? 'via n8n' : 'direct API'}
+              </Chip>
+            ))}
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-faint">
+            {decisionMeta ? (
+              <>
+                <Pill tone={decisionMeta.servedBy === 'n8n' ? 'good' : 'neutral'}>
+                  served by {decisionMeta.servedBy}
+                </Pill>
+                <span>{decisionMeta.latencyMs}ms</span>
+              </>
+            ) : null}
+            {!n8nAvailable ? <span>NEXT_PUBLIC_N8N_WEBHOOK_URL not set</span> : null}
+          </div>
+          {decisionMeta?.fallbackReason ? (
+            <p className="mt-1 text-[10px] text-warn">{decisionMeta.fallbackReason}</p>
+          ) : null}
+        </Section>
 
-              <Section title="Nudge history">
-                <p className="mb-2 text-[10px] text-faint">
-                  Held in this browser and sent with every request — which is what keeps the engine
-                  stateless and its decisions reproducible.
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      simulateHistory({
-                        product: decision?.product ?? 'postpaid',
-                        decidedAt: daysAgo(2),
-                        outcome: 'declined',
-                      })
-                    }
-                    className="rounded-lg border border-line bg-elevated px-2 py-1 text-[11px] text-muted transition hover:text-body"
-                  >
-                    Simulate: declined 2 days ago
-                  </button>
-                  <button
-                    type="button"
-                    onClick={clearHistory}
-                    className="rounded-lg border border-line bg-elevated px-2 py-1 text-[11px] text-muted transition hover:text-body"
-                  >
-                    Reset user ({history.length})
-                  </button>
-                </div>
-              </Section>
+        <Section title="Nudge history">
+          <p className="mb-2 text-[10px] text-faint">
+            Held in this browser and sent with every request — which is what keeps the engine
+            stateless and its decisions reproducible.
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() =>
+                simulateHistory({
+                  product: decision?.product ?? 'postpaid',
+                  decidedAt: daysAgo(2),
+                  outcome: 'declined',
+                })
+              }
+              className="rounded-lg border border-line bg-elevated px-2 py-1 text-[11px] text-muted transition hover:text-body"
+            >
+              Simulate: declined 2 days ago
+            </button>
+            <button
+              type="button"
+              onClick={clearHistory}
+              className="rounded-lg border border-line bg-elevated px-2 py-1 text-[11px] text-muted transition hover:text-body"
+            >
+              Reset user ({history.length})
+            </button>
+          </div>
+        </Section>
 
-              <Section title="What the system already knows">
-                {profile ? (
-                  <MemoryPanel profile={profile} />
-                ) : (
-                  <Skeleton rows={2} />
-                )}
-              </Section>
+        <Section title="What the system already knows">
+          {profile ? <MemoryPanel profile={profile} /> : <Skeleton rows={2} />}
+        </Section>
       </div>
     </Sheet>
   );
@@ -282,4 +274,3 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function daysAgo(days: number): string {
   return new Date(Date.now() - days * 86_400_000).toISOString();
 }
-

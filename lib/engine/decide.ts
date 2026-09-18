@@ -60,10 +60,7 @@ export function buildGateContext({ request, profile, merchantCreditEnabled }: De
   // affordability gate only declines when *no* plan would fit.
   const tenuresByProduct = new Map<string, EmiOption[]>();
   for (const product of fundingProducts) {
-    tenuresByProduct.set(
-      product.id,
-      buildTenures(amount, product.id, merchantCategory, timestamp),
-    );
+    tenuresByProduct.set(product.id, buildTenures(amount, product.id, merchantCategory, timestamp));
   }
   const minAchievableEmi = Math.min(
     ...[...tenuresByProduct.values()].map(lowestInstalment),

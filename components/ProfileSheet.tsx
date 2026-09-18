@@ -50,7 +50,11 @@ export function ProfileSheet() {
     >
       <div className="scroll-slim flex-1 space-y-5 overflow-y-auto px-5 pb-6 pt-1">
         <div className="grid grid-cols-3 gap-2">
-          <Fact icon={<Wallet size={14} />} label="Paytm Balance" value={formatINR(person.balance)} />
+          <Fact
+            icon={<Wallet size={14} />}
+            label="Paytm Balance"
+            value={formatINR(person.balance)}
+          />
           <Fact
             icon={<Landmark size={14} />}
             label="Linked bank"
@@ -111,7 +115,8 @@ export function ProfileSheet() {
             <>
               <div className="mb-2 flex items-baseline justify-between">
                 <span className="text-[11px] text-muted">
-                  {profile.features.txnCount} transactions &middot; {profile.features.accountAgeDays} days
+                  {profile.features.txnCount} transactions &middot;{' '}
+                  {profile.features.accountAgeDays} days
                 </span>
                 <span className="text-[18px] font-semibold text-body">
                   {profile.eligibilitySignal}

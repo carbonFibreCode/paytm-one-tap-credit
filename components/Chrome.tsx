@@ -62,15 +62,7 @@ export function AppBar({
 }
 
 /** Merchant monogram tile, standing in for a logo. */
-export function Monogram({
-  text,
-  tint,
-  size = 40,
-}: {
-  text: string;
-  tint: string;
-  size?: number;
-}) {
+export function Monogram({ text, tint, size = 40 }: { text: string; tint: string; size?: number }) {
   return (
     <span
       className="flex shrink-0 items-center justify-center rounded-xl font-semibold"

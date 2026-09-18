@@ -7,7 +7,14 @@
  * the rule it describes.
  */
 
-import type { EmiOption, GateId, ProductState, ScoreFactor, SignalComponent, UserProfile } from '../types';
+import type {
+  EmiOption,
+  GateId,
+  ProductState,
+  ScoreFactor,
+  SignalComponent,
+  UserProfile,
+} from '../types';
 import { formatINR } from '../format';
 import {
   AMOUNT_CEILING,
@@ -28,7 +35,11 @@ const NEAR_CUTOFF_MARGIN = 15;
 const NARROW_HEADROOM = 10;
 
 /** The item furthest from full marks — the reason a total is held back. */
-export function weakestBy<T>(items: T[], score: (item: T) => number, max: (item: T) => number): T | null {
+export function weakestBy<T>(
+  items: T[],
+  score: (item: T) => number,
+  max: (item: T) => number,
+): T | null {
   if (items.length === 0) return null;
   return items.reduce((lowest, item) =>
     score(item) / max(item) < score(lowest) / max(lowest) ? item : lowest,
@@ -36,10 +47,18 @@ export function weakestBy<T>(items: T[], score: (item: T) => number, max: (item:
 }
 
 export const weakestSignal = (components: SignalComponent[]) =>
-  weakestBy(components, (c) => c.points, (c) => c.max);
+  weakestBy(
+    components,
+    (c) => c.points,
+    (c) => c.max,
+  );
 
 export const weakestFactor = (factors: ScoreFactor[]) =>
-  weakestBy(factors, (f) => f.points, (f) => f.weight);
+  weakestBy(
+    factors,
+    (f) => f.points,
+    (f) => f.weight,
+  );
 
 export function summarise(
   product: ProductState,

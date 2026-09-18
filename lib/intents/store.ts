@@ -55,7 +55,8 @@ function draft(
     payload: buildUpiPayload(merchant, amount, { tr: ref, sign: signature }),
     signature,
     status: 'created',
-    expiresAt: kind === 'dynamic' ? new Date(Date.parse(now) + ttlMinutes * 60_000).toISOString() : null,
+    expiresAt:
+      kind === 'dynamic' ? new Date(Date.parse(now) + ttlMinutes * 60_000).toISOString() : null,
     createdAt: now,
   });
 }
@@ -67,12 +68,12 @@ export async function ensureStaticIntents(now = new Date().toISOString()): Promi
   await withTimeout(
     client
       .insert(paymentIntents)
-      .values(MERCHANTS.map((merchant) => draft(merchant, 'static', undefined, staticRef(merchant), now)))
+      .values(
+        MERCHANTS.map((merchant) => draft(merchant, 'static', undefined, staticRef(merchant), now)),
+      )
       .onConflictDoNothing({ target: paymentIntents.ref }),
   );
-  return withTimeout(
-    client.select().from(paymentIntents).where(eq(paymentIntents.kind, 'static')),
-  );
+  return withTimeout(client.select().from(paymentIntents).where(eq(paymentIntents.kind, 'static')));
 }
 
 /** A bill: this merchant, this amount, payable for the next `ttlMinutes`. */
@@ -124,7 +125,10 @@ export type ScanResult =
 
 const REFUSALS: Record<ScanRefusal, { status: number; message: string }> = {
   unsigned: { status: 400, message: 'This QR carries no payment intent.' },
-  tampered: { status: 401, message: 'Signature check failed — this QR has been altered. Do not pay.' },
+  tampered: {
+    status: 401,
+    message: 'Signature check failed — this QR has been altered. Do not pay.',
+  },
   unknown: { status: 404, message: 'This QR was not issued by us.' },
   mismatch: { status: 401, message: 'This QR does not match the intent it claims to be.' },
   expired: { status: 410, message: 'This bill has expired. Ask the merchant for a fresh QR.' },
@@ -138,7 +142,10 @@ function refuse(reason: ScanRefusal, ref?: string): ScanResult {
 }
 
 /** The payer-side check. Marks a fresh intent as scanned on success. */
-export async function scanIntent(payload: string, now = new Date().toISOString()): Promise<ScanResult> {
+export async function scanIntent(
+  payload: string,
+  now = new Date().toISOString(),
+): Promise<ScanResult> {
   const parsed = parseUpiPayload(payload);
   if (!parsed?.tr) return refuse('unsigned');
   if (!verifyIntent(payload)) return refuse('tampered', parsed.tr);

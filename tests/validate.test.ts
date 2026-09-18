@@ -18,9 +18,7 @@ import { firstIssue } from '../lib/schemas';
 
 const NOW = '2026-09-19T14:30:00+05:30';
 
-type Outcome =
-  | { ok: true; value: DecideInputs }
-  | { ok: false; status: number; error: string };
+type Outcome = { ok: true; value: DecideInputs } | { ok: false; status: number; error: string };
 
 /** Mirrors what a route does: parse, then resolve, reporting either failure. */
 function decide(body: unknown): Outcome {

@@ -48,8 +48,11 @@ export const POST = jsonRoute<typeof scanBody, Context>(scanBody, async (input, 
   });
 });
 
-export const PATCH = jsonRoute<typeof attachBody, Context>(attachBody, async (input, { params }) => {
-  const { ref } = await params;
-  await attachDecision(ref, input.decisionKey);
-  return NextResponse.json({ ok: true, ref, decisionKey: input.decisionKey });
-});
+export const PATCH = jsonRoute<typeof attachBody, Context>(
+  attachBody,
+  async (input, { params }) => {
+    const { ref } = await params;
+    await attachDecision(ref, input.decisionKey);
+    return NextResponse.json({ ok: true, ref, decisionKey: input.decisionKey });
+  },
+);

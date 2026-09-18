@@ -97,16 +97,14 @@ export async function requestDecision(
   if (mode === 'orchestrated' && n8nConfigured()) {
     const startedAt = Date.now();
     try {
-      const result = await postJson<DecideOutcome['decision'] & { nudgeText?: DecideOutcome['nudgeText'] }>(
-        N8N_WEBHOOK_URL,
-        payload,
-        N8N_TIMEOUT_MS,
-      );
+      const result = await postJson<
+        DecideOutcome['decision'] & { nudgeText?: DecideOutcome['nudgeText'] }
+      >(N8N_WEBHOOK_URL, payload, N8N_TIMEOUT_MS);
       // n8n workflows can be wired to respond with the decision at the top
       // level or wrapped; accept either rather than failing the demo on shape.
-      const decision = (('decision' in (result as object)
+      const decision = ('decision' in (result as object)
         ? (result as unknown as { decision: Decision }).decision
-        : result) as unknown) as Decision;
+        : result) as unknown as Decision;
 
       if (decision && typeof decision.showNudge === 'boolean') {
         return {
@@ -193,7 +191,8 @@ export async function verifyScan(ref: string, payload: string): Promise<ScanVerd
     if (response.ok && body.ok && body.merchantId) {
       return { ok: true, ref, merchantId: body.merchantId, amount: body.amount ?? undefined };
     }
-    if (body.reason && body.message) return { ok: false, reason: body.reason, message: body.message };
+    if (body.reason && body.message)
+      return { ok: false, reason: body.reason, message: body.message };
     throw new Error(body.error ?? `${response.status}`);
   } finally {
     clearTimeout(timer);

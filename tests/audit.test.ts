@@ -25,9 +25,30 @@ const decision: AuditRecord = {
 
 describe('database boundary validation', () => {
   test('a decision row must carry a 0–100 score and an ISO timestamp', () => {
-    expect(insertDecisionSchema.safeParse({ decisionKey: 'k', userId: 'u', requestedAt: 'yesterday', score: 50 }).success).toBe(false);
-    expect(insertDecisionSchema.safeParse({ decisionKey: 'k', userId: 'u', requestedAt: decision.at, score: 101 }).success).toBe(false);
-    expect(insertDecisionSchema.safeParse({ decisionKey: 'k', userId: 'u', requestedAt: decision.at, score: 78 }).success).toBe(true);
+    expect(
+      insertDecisionSchema.safeParse({
+        decisionKey: 'k',
+        userId: 'u',
+        requestedAt: 'yesterday',
+        score: 50,
+      }).success,
+    ).toBe(false);
+    expect(
+      insertDecisionSchema.safeParse({
+        decisionKey: 'k',
+        userId: 'u',
+        requestedAt: decision.at,
+        score: 101,
+      }).success,
+    ).toBe(false);
+    expect(
+      insertDecisionSchema.safeParse({
+        decisionKey: 'k',
+        userId: 'u',
+        requestedAt: decision.at,
+        score: 78,
+      }).success,
+    ).toBe(true);
   });
 
   test('an outcome must be one of the three known values', () => {

@@ -24,10 +24,7 @@ const emi = (): RecurringObligation => ({
   occurrences: 0,
 });
 
-function post(
-  handler: (request: Request, context: never) => Promise<Response>,
-  body: unknown,
-) {
+function post(handler: (request: Request, context: never) => Promise<Response>, body: unknown) {
   return handler(
     new Request('http://test/api', {
       method: 'POST',
@@ -48,55 +45,58 @@ describe('offer parity between decide() and the n8n offer stage', () => {
     }
   }
 
-  test.each(grid)('%s at %s for ₹%i with %i open plans', async (userId, merchantId, amount, plans) => {
-    const persona = getPersona(userId)!;
-    const merchant = getMerchant(merchantId)!;
-    const live: LiveCredit = {
-      obligations: Array.from({ length: plans }, emi),
-      outstanding: { postpaid: 0, card: 0 },
-    };
-    const profile = buildProfile(persona, NOW, live);
+  test.each(grid)(
+    '%s at %s for ₹%i with %i open plans',
+    async (userId, merchantId, amount, plans) => {
+      const persona = getPersona(userId)!;
+      const merchant = getMerchant(merchantId)!;
+      const live: LiveCredit = {
+        obligations: Array.from({ length: plans }, emi),
+        outstanding: { postpaid: 0, card: 0 },
+      };
+      const profile = buildProfile(persona, NOW, live);
 
-    const direct = decide({
-      request: {
-        transactionId: 't',
-        userId,
-        amount,
-        merchantId,
-        merchantName: merchant.name,
-        merchantCategory: merchant.category,
-        timestamp: NOW,
-        nudgeHistory: [],
-      },
-      profile,
-      merchantCreditEnabled: merchant.creditEnabled,
-    });
-
-    // Stage 2 — gates — hands the offer stage its funding products.
-    const gates = await (
-      await post(gatesStage, { profile, amount, merchantId, timestamp: NOW, nudgeHistory: [] })
-    ).json();
-    expect(gates.passed).toBe(direct.blockedBy === null);
-    if (!direct.showNudge) return;
-
-    // Stage 4 — offer.
-    const staged = await (
-      await post(offerStage, {
+      const direct = decide({
+        request: {
+          transactionId: 't',
+          userId,
+          amount,
+          merchantId,
+          merchantName: merchant.name,
+          merchantCategory: merchant.category,
+          timestamp: NOW,
+          nudgeHistory: [],
+        },
         profile,
-        amount,
-        merchantCategory: merchant.category,
-        timestamp: NOW,
-        fundingProducts: gates.fundingProducts,
-        eligibleProducts: gates.eligibleProducts,
-      })
-    ).json();
+        merchantCreditEnabled: merchant.creditEnabled,
+      });
 
-    expect(staged.product).toBe(direct.product);
-    expect(staged.offer).toEqual(direct.offer);
-    expect(staged.productRationale).toBe(direct.trace.productRationale);
-    expect(staged.decline).toEqual(direct.decline);
-    for (const tenure of staged.offer.tenures) {
-      expect(tenure.emi).toBeLessThanOrEqual(profile.features.affordabilityCapacity);
-    }
-  });
+      // Stage 2 — gates — hands the offer stage its funding products.
+      const gates = await (
+        await post(gatesStage, { profile, amount, merchantId, timestamp: NOW, nudgeHistory: [] })
+      ).json();
+      expect(gates.passed).toBe(direct.blockedBy === null);
+      if (!direct.showNudge) return;
+
+      // Stage 4 — offer.
+      const staged = await (
+        await post(offerStage, {
+          profile,
+          amount,
+          merchantCategory: merchant.category,
+          timestamp: NOW,
+          fundingProducts: gates.fundingProducts,
+          eligibleProducts: gates.eligibleProducts,
+        })
+      ).json();
+
+      expect(staged.product).toBe(direct.product);
+      expect(staged.offer).toEqual(direct.offer);
+      expect(staged.productRationale).toBe(direct.trace.productRationale);
+      expect(staged.decline).toEqual(direct.decline);
+      for (const tenure of staged.offer.tenures) {
+        expect(tenure.emi).toBeLessThanOrEqual(profile.features.affordabilityCapacity);
+      }
+    },
+  );
 });

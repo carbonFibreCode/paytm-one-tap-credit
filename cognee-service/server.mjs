@@ -37,7 +37,8 @@ const ENV_FILE = new URL('.env', import.meta.url);
 if (existsSync(ENV_FILE)) {
   for (const line of readFileSync(ENV_FILE, 'utf8').split('\n')) {
     const match = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*)\s*$/);
-    if (match && !process.env[match[1]]) process.env[match[1]] = match[2].replace(/^["']|["']$/g, '');
+    if (match && !process.env[match[1]])
+      process.env[match[1]] = match[2].replace(/^["']|["']$/g, '');
   }
 }
 
@@ -190,7 +191,8 @@ createServer(async (req, res) => {
 
   const handler = ROUTES[req.url ?? ''];
   if (req.method !== 'POST' || !handler) {
-    return res.writeHead(404, { 'Content-Type': 'application/json' })
+    return res
+      .writeHead(404, { 'Content-Type': 'application/json' })
       .end(JSON.stringify({ error: 'Not found' }));
   }
 
@@ -201,7 +203,8 @@ createServer(async (req, res) => {
     const { status, payload } = await handler(body);
     res.writeHead(status, { 'Content-Type': 'application/json' }).end(JSON.stringify(payload));
   } catch (error) {
-    res.writeHead(500, { 'Content-Type': 'application/json' })
+    res
+      .writeHead(500, { 'Content-Type': 'application/json' })
       .end(JSON.stringify({ error: error?.message ?? String(error) }));
   }
 }).listen(PORT, async () => {

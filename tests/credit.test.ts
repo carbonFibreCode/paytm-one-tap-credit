@@ -66,7 +66,9 @@ describe('live credit feeds the profile', () => {
     const after = computeFeatures(ledger, NOW, creditRecordFor(rohit), [postpaidEmi()]);
 
     expect(after.existingEmiOutflow).toBe(before.existingEmiOutflow + 16_667);
-    expect(after.affordabilityCapacity).toBe(before.affordabilityCapacity - Math.round(16_667 * 0.4));
+    expect(after.affordabilityCapacity).toBe(
+      before.affordabilityCapacity - Math.round(16_667 * 0.4),
+    );
     expect(after.detectedObligations.at(-1)).toMatchObject({ source: 'account', amount: 16_667 });
     // Eligibility is a different question; live credit must not touch it.
     expect(after.priorCreditRepayments).toBe(before.priorCreditRepayments);
@@ -112,7 +114,8 @@ describe('the demo beat: taking credit tightens the next decision', () => {
     expect(decision.showNudge).toBe(true);
     expect(decision.product).toBe('card');
     expect(decision.offer?.tenures.length).toBeGreaterThan(0);
-    for (const tenure of decision.offer?.tenures ?? []) expect(tenure.emi).toBeLessThanOrEqual(capacity);
+    for (const tenure of decision.offer?.tenures ?? [])
+      expect(tenure.emi).toBeLessThanOrEqual(capacity);
     expect(decision.trace.productRationale).toContain('exceeds');
   });
 

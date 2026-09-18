@@ -131,7 +131,12 @@ export async function recordPayment(input: RecordPaymentInput): Promise<Recorded
     openedAt: input.at,
   });
   const rows = schedule.map((row) =>
-    insertInstallmentSchema.parse({ accountId, seq: row.index, dueDate: row.date, amount: row.amount }),
+    insertInstallmentSchema.parse({
+      accountId,
+      seq: row.index,
+      dueDate: row.date,
+      amount: row.amount,
+    }),
   );
 
   statements.push(

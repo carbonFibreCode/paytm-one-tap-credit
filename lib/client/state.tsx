@@ -38,7 +38,6 @@ import {
   requestNudgeText,
   resetUserCredit,
   type OrchestrationMode,
-  type ServedBy,
 } from './api';
 
 // Bumping this version drops any history stored under the previous key, which
@@ -131,39 +130,46 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }, DECISION_DEBOUNCE_MS);
 
     function runDecision() {
-    requestDecision(
-      { userId, merchantId, amount, selectedInstrument: instrument, nudgeHistory: history, intentRef: intentRef ?? undefined },
-      mode,
-    )
-      .then((outcome) => {
-        if (cancelled) return;
-        // Close the loop on the QR: the intent now knows which decision it led to.
-        if (intentRef) attachIntentDecision(intentRef, outcome.decision.transactionId);
-        dispatch({
-          type: 'decisionOk',
-          decision: outcome.decision,
-          meta: {
-            servedBy: outcome.servedBy,
-            latencyMs: outcome.latencyMs,
-            fallbackReason: outcome.fallbackReason,
-          },
-          copy: outcome.nudgeText
-            ? {
-                text: outcome.nudgeText.text,
-                source: outcome.nudgeText.source,
-                reason: outcome.nudgeText.reason,
-                latencyMs: outcome.nudgeText.latencyMs,
-              }
-            : undefined,
+      requestDecision(
+        {
+          userId,
+          merchantId,
+          amount,
+          selectedInstrument: instrument,
+          nudgeHistory: history,
+          intentRef: intentRef ?? undefined,
+        },
+        mode,
+      )
+        .then((outcome) => {
+          if (cancelled) return;
+          // Close the loop on the QR: the intent now knows which decision it led to.
+          if (intentRef) attachIntentDecision(intentRef, outcome.decision.transactionId);
+          dispatch({
+            type: 'decisionOk',
+            decision: outcome.decision,
+            meta: {
+              servedBy: outcome.servedBy,
+              latencyMs: outcome.latencyMs,
+              fallbackReason: outcome.fallbackReason,
+            },
+            copy: outcome.nudgeText
+              ? {
+                  text: outcome.nudgeText.text,
+                  source: outcome.nudgeText.source,
+                  reason: outcome.nudgeText.reason,
+                  latencyMs: outcome.nudgeText.latencyMs,
+                }
+              : undefined,
+          });
+        })
+        .catch((error: unknown) => {
+          if (cancelled) return;
+          dispatch({
+            type: 'decisionFail',
+            error: error instanceof Error ? error.message : String(error),
+          });
         });
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        dispatch({
-          type: 'decisionFail',
-          error: error instanceof Error ? error.message : String(error),
-        });
-      });
     }
 
     return () => {

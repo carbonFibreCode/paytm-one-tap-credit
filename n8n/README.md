@@ -40,7 +40,7 @@ This is the pipeline the pitch describes: detection → decision → surfaced of
 
 Three things worth pointing at during a demo:
 
-- **The audit nodes run *after* the Respond nodes.** Logging is a side-effect; it
+- **The audit nodes run _after_ the Respond nodes.** Logging is a side-effect; it
   can never slow down or fail a payment.
 - **`Sarvam nudge copy` has `onError: continueRegularOutput`.** If Sarvam is down,
   the error flows to `Attach copy`, which falls back to the engine's own summary.
@@ -56,7 +56,7 @@ seconds. The demo drawer shows which path actually served the response.
 
 Accept or decline on the nudge card fires here, fire-and-forget. A Code node
 validates the outcome before it reaches the trail, so a malformed call cannot
-corrupt the digest. Retries three times — this one we *do* want to land.
+corrupt the digest. Retries three times — this one we _do_ want to land.
 
 This closes the funnel: without it there is no acceptance rate.
 

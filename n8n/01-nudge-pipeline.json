@@ -12,10 +12,7 @@
       "name": "Transaction event",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        -1100,
-        300
-      ],
+      "position": [-1100, 300],
       "webhookId": "11111111-0000-4000-8000-000000000001"
     },
     {
@@ -33,10 +30,7 @@
       "name": "Recall memory",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        -880,
-        300
-      ],
+      "position": [-880, 300],
       "onError": "continueRegularOutput"
     },
     {
@@ -54,10 +48,7 @@
       "name": "Build profile",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        -660,
-        300
-      ],
+      "position": [-660, 300],
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 400
@@ -77,10 +68,7 @@
       "name": "Run gates",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        -440,
-        300
-      ],
+      "position": [-440, 300],
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 400
@@ -115,10 +103,7 @@
       "name": "Gates passed?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [
-        20,
-        300
-      ]
+      "position": [20, 300]
     },
     {
       "parameters": {
@@ -135,10 +120,7 @@
       "name": "Score relevance",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        -220,
-        300
-      ]
+      "position": [-220, 300]
     },
     {
       "parameters": {
@@ -170,10 +152,7 @@
       "name": "Worth interrupting?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [
-        240,
-        180
-      ]
+      "position": [240, 180]
     },
     {
       "parameters": {
@@ -190,10 +169,7 @@
       "name": "Build offer",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        480,
-        60
-      ]
+      "position": [480, 60]
     },
     {
       "parameters": {
@@ -203,10 +179,7 @@
       "name": "Pick headline plan",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        700,
-        60
-      ]
+      "position": [700, 60]
     },
     {
       "parameters": {
@@ -223,10 +196,7 @@
       "name": "Sarvam nudge copy",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        920,
-        60
-      ],
+      "position": [920, 60],
       "onError": "continueRegularOutput",
       "retryOnFail": true,
       "maxTries": 2,
@@ -240,10 +210,7 @@
       "name": "Assemble decision",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1140,
-        60
-      ]
+      "position": [1140, 60]
     },
     {
       "parameters": {
@@ -255,10 +222,7 @@
       "name": "Respond with nudge",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [
-        1360,
-        60
-      ]
+      "position": [1360, 60]
     },
     {
       "parameters": {
@@ -275,10 +239,7 @@
       "name": "Log decision · shown",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1580,
-        60
-      ],
+      "position": [1580, 60],
       "onError": "continueRegularOutput"
     },
     {
@@ -289,10 +250,7 @@
       "name": "Assemble withheld",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        480,
-        420
-      ]
+      "position": [480, 420]
     },
     {
       "parameters": {
@@ -304,10 +262,7 @@
       "name": "Respond, no nudge",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [
-        700,
-        420
-      ]
+      "position": [700, 420]
     },
     {
       "parameters": {
@@ -324,10 +279,7 @@
       "name": "Log decision · withheld",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        920,
-        420
-      ],
+      "position": [920, 420],
       "onError": "continueRegularOutput"
     }
   ],

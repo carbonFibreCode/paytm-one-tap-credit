@@ -28,7 +28,9 @@ export default function GlobalError({
         <div style={{ textAlign: 'center', padding: 24 }}>
           <p style={{ fontSize: 13, opacity: 0.7 }}>The app could not start.</p>
           {error.digest ? (
-            <p style={{ fontSize: 10, opacity: 0.5, fontFamily: 'monospace' }}>ref {error.digest}</p>
+            <p style={{ fontSize: 10, opacity: 0.5, fontFamily: 'monospace' }}>
+              ref {error.digest}
+            </p>
           ) : null}
           <button
             type="button"

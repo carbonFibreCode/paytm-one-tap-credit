@@ -8,7 +8,13 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { initialState, reducer, type Action, type PaymentRecord, type State } from '../lib/client/state-machine';
+import {
+  initialState,
+  reducer,
+  type Action,
+  type PaymentRecord,
+  type State,
+} from '../lib/client/state-machine';
 import type { Decision, NudgeHistoryEntry } from '../lib/types';
 
 /** Enough of a decision to tell "present" from "cleared". */
@@ -37,7 +43,10 @@ describe('a decision never outlives the transaction it described', () => {
   test.each([
     ['the amount changes', { type: 'setAmount', amount: 60_000 } as Action],
     ['the instrument changes', { type: 'setInstrument', instrument: 'wallet' } as Action],
-    ['the merchant changes', { type: 'selectMerchant', merchantId: 'm_jewels', amount: 80_000 } as Action],
+    [
+      'the merchant changes',
+      { type: 'selectMerchant', merchantId: 'm_jewels', amount: 80_000 } as Action,
+    ],
     ['the user changes', { type: 'setUser', userId: 'u_priya' } as Action],
     ['the orchestration mode changes', { type: 'setMode', mode: 'direct' } as Action],
   ])('it is cleared when %s', (_label, action) => {
@@ -76,13 +85,17 @@ describe('scanning a QR', () => {
       amount: 50_000,
       intentRef: 'OTCDKROMA0123456789',
     });
-    const picked = apply(scanned, { type: 'selectMerchant', merchantId: 'm_jewels', amount: 80_000 });
+    const picked = apply(scanned, {
+      type: 'selectMerchant',
+      merchantId: 'm_jewels',
+      amount: 80_000,
+    });
     expect(picked.intentRef).toBeNull();
   });
 });
 
 describe('payments', () => {
-  test('a payment lands in this user\'s history and shows the success screen', () => {
+  test("a payment lands in this user's history and shows the success screen", () => {
     const next = apply(initialState, { type: 'pay', payment });
     expect(next.screen).toBe('success');
     expect(next.payment).toEqual(payment);

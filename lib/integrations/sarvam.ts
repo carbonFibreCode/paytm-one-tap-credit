@@ -216,7 +216,10 @@ async function callSarvam(context: NudgeContext): Promise<string> {
     if (typeof text !== 'string') throw new Error('Sarvam response had no message content');
 
     // Models often wrap a one-liner in quotes; strip them rather than reject.
-    return text.trim().replace(/^["'“”]|["'“”]$/g, '').trim();
+    return text
+      .trim()
+      .replace(/^["'“”]|["'“”]$/g, '')
+      .trim();
   } finally {
     clearTimeout(timer);
   }

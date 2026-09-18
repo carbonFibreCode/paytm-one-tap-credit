@@ -133,4 +133,3 @@ export async function countRecords(): Promise<{ decisions: number; outcomes: num
   );
   return { decisions: d?.n ?? 0, outcomes: o?.n ?? 0 };
 }
-

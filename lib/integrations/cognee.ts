@@ -59,7 +59,9 @@ async function callCognee<T>(
       signal: controller.signal,
     });
     if (!response.ok) {
-      throw new Error(`${response.status} ${(await response.text().catch(() => '')).slice(0, 120)}`);
+      throw new Error(
+        `${response.status} ${(await response.text().catch(() => '')).slice(0, 120)}`,
+      );
     }
     return (await response.json()) as T;
   } finally {
@@ -234,7 +236,7 @@ export async function warmMemory(userId: string): Promise<MemoryContext> {
  * Scanning the whole tree rather than a fixed path also means a change to how
  * results are nested cannot silently break recall.
  */
-function extractOutcomes(payload: unknown): Array<Record<string, unknown>> {
+export function extractOutcomes(payload: unknown): Array<Record<string, unknown>> {
   const found: Array<Record<string, unknown>> = [];
   const seen = new Set<string>();
 

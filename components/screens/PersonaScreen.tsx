@@ -20,15 +20,14 @@ export function PersonaScreen() {
 
   return (
     <div className="flex h-full flex-col bg-gradient-to-b from-brand-deep via-ink to-ink">
-
       <div className="pt-safe px-6 pb-5">
         <PaytmWordmark />
         <h1 className="mt-6 text-[22px] font-semibold leading-tight text-white">
           Who&rsquo;s paying today?
         </h1>
         <p className="mt-1.5 text-[12px] leading-relaxed text-white/55">
-          Each profile has a different transaction history, so the credit engine reaches a
-          different decision. Pick one to begin.
+          Each profile has a different transaction history, so the credit engine reaches a different
+          decision. Pick one to begin.
         </p>
       </div>
 

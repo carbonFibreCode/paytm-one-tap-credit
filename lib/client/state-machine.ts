@@ -16,13 +16,7 @@ import { MERCHANTS } from '../fixtures/merchants';
 import type { OrchestrationMode, ServedBy } from './api';
 
 export type Screen =
-  | 'persona'
-  | 'home'
-  | 'scanner'
-  | 'history'
-  | 'checkout'
-  | 'approved'
-  | 'success';
+  'persona' | 'home' | 'scanner' | 'history' | 'checkout' | 'approved' | 'success';
 
 export interface PaymentRecord {
   amount: number;
@@ -149,7 +143,13 @@ function clearDecision(state: State): State {
 export function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'go':
-      return { ...state, screen: action.screen, drawerOpen: false, infoOpen: false, traceOpen: false };
+      return {
+        ...state,
+        screen: action.screen,
+        drawerOpen: false,
+        infoOpen: false,
+        traceOpen: false,
+      };
 
     case 'selectMerchant':
       return {

@@ -94,7 +94,9 @@ export function buildTenures(
   const noCostEligible = NO_COST_CATEGORIES.includes(category);
 
   return TENURES[product]
-    .map((months) => buildOption(principal, months, noCostEligible && months === 3, apr, firstDueDate))
+    .map((months) =>
+      buildOption(principal, months, noCostEligible && months === 3, apr, firstDueDate),
+    )
     .filter((option) => option.emi >= MIN_SENSIBLE_EMI);
 }
 

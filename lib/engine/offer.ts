@@ -21,7 +21,10 @@ import { selectProduct } from './product';
 export const DECLINE_SUPPRESS_DAYS = 7;
 
 /** The decline control every offer carries, weighted equally with accepting. */
-export const DECLINE = { label: 'No thanks, pay normally', suppressDays: DECLINE_SUPPRESS_DAYS } as const;
+export const DECLINE = {
+  label: 'No thanks, pay normally',
+  suppressDays: DECLINE_SUPPRESS_DAYS,
+} as const;
 
 export interface OfferInput {
   /** Eligible products whose available limit covers the purchase in full. */

@@ -170,9 +170,7 @@ export function scoreTransaction(
     points: round(contextValue * WEIGHTS.context),
     detail:
       affinity > 0
-        ? `${Math.round(
-            affinity * 100,
-          )}% of this user's discretionary spend is in ${category}; ${
+        ? `${Math.round(affinity * 100)}% of this user's discretionary spend is in ${category}; ${
             profile.features.bigTicketCount6m
           } big-ticket purchase${
             profile.features.bigTicketCount6m === 1 ? '' : 's'

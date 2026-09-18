@@ -15,10 +15,7 @@
       "name": "Every night at 3am",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [
-        -380,
-        300
-      ]
+      "position": [-380, 300]
     },
     {
       "parameters": {
@@ -28,10 +25,7 @@
       "name": "Build combinations",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -160,
-        300
-      ]
+      "position": [-160, 300]
     },
     {
       "parameters": {
@@ -42,10 +36,7 @@
       "name": "Loop in batches of 3",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [
-        60,
-        300
-      ]
+      "position": [60, 300]
     },
     {
       "parameters": {
@@ -62,10 +53,7 @@
       "name": "Warm the cache",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        300,
-        420
-      ],
+      "position": [300, 420],
       "onError": "continueRegularOutput",
       "retryOnFail": true,
       "maxTries": 2,
@@ -79,10 +67,7 @@
       "name": "Warm-up report",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        300,
-        180
-      ]
+      "position": [300, 180]
     },
     {
       "parameters": {},
@@ -90,10 +75,7 @@
       "name": "Run now (manual)",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "position": [
-        -380,
-        460
-      ]
+      "position": [-380, 460]
     }
   ],
   "connections": {

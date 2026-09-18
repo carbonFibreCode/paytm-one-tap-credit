@@ -28,11 +28,11 @@ direct API path; keys upgrade those two slots in place. See `.env.example`.
 
 ## What's real and what's mocked
 
-| | |
-|---|---|
-| **Built here** | The decision engine, the memory/feature layer, the audit trail, the checkout UI, the orchestration wiring |
-| **Mocked** | Credit issuance, KYC, OTP, the partner-bank approval call — Paytm and its partner banks (SBI / HDFC / IDFC First / Suryoday) run this in production already |
-| **Synthetic** | Every user, merchant and transaction. Eligibility is a *simplified stand-in* for Paytm's real underwriting, not an attempt to reproduce it |
+|                |                                                                                                                                                             |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Built here** | The decision engine, the memory/feature layer, the audit trail, the checkout UI, the orchestration wiring                                                   |
+| **Mocked**     | Credit issuance, KYC, OTP, the partner-bank approval call — Paytm and its partner banks (SBI / HDFC / IDFC First / Suryoday) run this in production already |
+| **Synthetic**  | Every user, merchant and transaction. Eligibility is a _simplified stand-in_ for Paytm's real underwriting, not an attempt to reproduce it                  |
 
 Synthetic does not mean arbitrary. Each persona has a seeded transaction ledger, and every
 behavioural signal is re-derived from those rows — see below.
@@ -75,7 +75,7 @@ supplies the timestamp and the nudge history. Three consequences:
 The pitch rests on "the system already knows." That claim is backed rather than asserted:
 
 - **Salary** is detected by finding repeated credits of a similar size across months — not read
-  from config. Irregular freelance income is detected as *weaker*, which is the point.
+  from config. Irregular freelance income is detected as _weaker_, which is the point.
 - **Existing EMIs** are detected by finding the same merchant charging the same amount in three or
   more distinct months.
 - Those two drive `affordabilityCapacity`, which is what the affordability gate checks.
@@ -95,7 +95,7 @@ Ordered, short-circuiting; the first failure decides the outcome and no score ov
 
 Two worth calling out. **`CATEGORY_PROHIBITED`** blocks person-to-person transfers, wallet
 top-ups, gambling and crypto outright — routing borrowed money into a cash-equivalent is what
-lending rules exist to prevent. **`AFFORDABILITY`** declines users who *pass* eligibility but whose
+lending rules exist to prevent. **`AFFORDABILITY`** declines users who _pass_ eligibility but whose
 existing commitments leave no room; it is the gate that says we are not optimising for disbursal.
 
 ---
@@ -195,20 +195,20 @@ hand from the diagram above.
 
 Open the drawer by tapping the avatar on the home screen. Each row is one tap.
 
-| # | Do this | What happens | The line to say |
-|---|---|---|---|
-| 1 | Rohit → Kroma Electronics, ₹50,000 | Nudge: Postpaid, 3 × ₹16,667, no cost | "The offer appears at the moment of paying, in Hindi, already priced." |
-| 2 | Tap **Why am I seeing this?** | 14 checks, 4 score factors, 5 signal components | "Every decision is auditable. That's slide 11, shipped." |
-| 3 | Keypad → change to ₹450 | Nudge disappears, engine strip shows `AMOUNT_FLOOR` | "It declines more often than it offers." |
-| 4 | Merchant → Rahul Sharma (P2P), ₹35,000 | `CATEGORY_PROHIBITED` | "No amount and no eligibility signal unlocks this one." |
-| 5 | Persona → Priya, ₹50,000 | `AFFORDABILITY`, signal 70 | "She *passes* eligibility. We decline anyway — ₹8,727/month against ₹7,951 of capacity." |
-| 6 | Persona → Aman | `COLD_START` — 18 days, 8 transactions | "Cold start is on our risk slide. Here it is, handled." |
-| 7 | Drawer → **What the system already knows** | Ledger rows, detected salary, detected EMIs | "This is where the eligibility number comes from. Nothing is hardcoded." |
-| 8 | Back to Rohit ₹50,000 → Activate & Pay → confirm | Approval, schedule, success | "16,667 + 16,667 + 16,666 — it adds up to exactly ₹50,000." |
-| 9 | Terminal: `npm test` | 32 passing in ~150ms | "And it's covered." |
+| #   | Do this                                          | What happens                                        | The line to say                                                                          |
+| --- | ------------------------------------------------ | --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 1   | Rohit → Kroma Electronics, ₹50,000               | Nudge: Postpaid, 3 × ₹16,667, no cost               | "The offer appears at the moment of paying, in Hindi, already priced."                   |
+| 2   | Tap **Why am I seeing this?**                    | 14 checks, 4 score factors, 5 signal components     | "Every decision is auditable. That's slide 11, shipped."                                 |
+| 3   | Keypad → change to ₹450                          | Nudge disappears, engine strip shows `AMOUNT_FLOOR` | "It declines more often than it offers."                                                 |
+| 4   | Merchant → Rahul Sharma (P2P), ₹35,000           | `CATEGORY_PROHIBITED`                               | "No amount and no eligibility signal unlocks this one."                                  |
+| 5   | Persona → Priya, ₹50,000                         | `AFFORDABILITY`, signal 70                          | "She _passes_ eligibility. We decline anyway — ₹8,727/month against ₹7,951 of capacity." |
+| 6   | Persona → Aman                                   | `COLD_START` — 18 days, 8 transactions              | "Cold start is on our risk slide. Here it is, handled."                                  |
+| 7   | Drawer → **What the system already knows**       | Ledger rows, detected salary, detected EMIs         | "This is where the eligibility number comes from. Nothing is hardcoded."                 |
+| 8   | Back to Rohit ₹50,000 → Activate & Pay → confirm | Approval, schedule, success                         | "16,667 + 16,667 + 16,666 — it adds up to exactly ₹50,000."                              |
+| 9   | Terminal: `npm test`                             | 32 passing in ~150ms                                | "And it's covered."                                                                      |
 
-**Closing line:** *"The credit products already exist. The bank approvals already exist. What was
-missing was the decision layer that knows when to ask — and, more often, when not to."*
+**Closing line:** _"The credit products already exist. The bank approvals already exist. What was
+missing was the decision layer that knows when to ask — and, more often, when not to."_
 
 ---
 
@@ -219,5 +219,5 @@ npm test        # 32 tests: every gate, product selection, EMI rounding, the aud
 npm run scenarios
 ```
 
-The EMI tests are worth a look — no-cost instalments must sum to the principal *exactly*, and the
+The EMI tests are worth a look — no-cost instalments must sum to the principal _exactly_, and the
 final payment must never be the largest one.

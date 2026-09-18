@@ -12,10 +12,7 @@
       "name": "Nudge outcome",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        -300,
-        300
-      ],
+      "position": [-300, 300],
       "webhookId": "22222222-0000-4000-8000-000000000001"
     },
     {
@@ -26,10 +23,7 @@
       "name": "Validate outcome",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -80,
-        300
-      ]
+      "position": [-80, 300]
     },
     {
       "parameters": {
@@ -46,10 +40,7 @@
       "name": "Append to trail",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        140,
-        300
-      ],
+      "position": [140, 300],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 500
@@ -69,10 +60,7 @@
       "name": "Remember in Cognee",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        360,
-        300
-      ],
+      "position": [360, 300],
       "onError": "continueRegularOutput",
       "retryOnFail": true,
       "maxTries": 2,

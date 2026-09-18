@@ -35,7 +35,10 @@ export function merchantCategoryCode(merchant: Merchant): string {
 
 /** `Kroma Electronics` → `kroma` */
 export function handleFor(merchant: Merchant): string {
-  return merchant.name.toLowerCase().split(/\s+/)[0].replace(/[^a-z0-9]/g, '');
+  return merchant.name
+    .toLowerCase()
+    .split(/\s+/)[0]
+    .replace(/[^a-z0-9]/g, '');
 }
 
 export function upiVpa(merchant: Merchant): string {

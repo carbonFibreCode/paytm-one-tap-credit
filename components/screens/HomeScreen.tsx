@@ -285,7 +285,11 @@ function Section({
   return (
     <section className="px-4 pt-5">
       <h2 className="text-[12px] font-semibold text-body">{title}</h2>
-      {caption ? <p className="mb-2.5 mt-0.5 text-[10px] text-faint">{caption}</p> : <div className="h-2.5" />}
+      {caption ? (
+        <p className="mb-2.5 mt-0.5 text-[10px] text-faint">{caption}</p>
+      ) : (
+        <div className="h-2.5" />
+      )}
       {children}
     </section>
   );

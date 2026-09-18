@@ -116,7 +116,9 @@ describe('DecisionTrace', () => {
     render(<DecisionTrace decision={decision} />);
 
     expect(screen.getByText(`All ${decision.trace.gates.length} checks passed`)).not.toBeNull();
-    expect(screen.getByRole('button', { name: `Checks (${decision.trace.gates.length})` })).not.toBeNull();
+    expect(
+      screen.getByRole('button', { name: `Checks (${decision.trace.gates.length})` }),
+    ).not.toBeNull();
     // The product rationale is the sentence a judge reads aloud.
     expect(screen.getByText(/Why this product:/)).not.toBeNull();
   });
@@ -138,6 +140,8 @@ describe('DecisionTrace', () => {
     }
     // All three tabs are reachable.
     expect(screen.getByRole('button', { name: `Relevance ${decision.score}` })).not.toBeNull();
-    expect(screen.getByRole('button', { name: `Signal ${decision.eligibilitySignal}` })).not.toBeNull();
+    expect(
+      screen.getByRole('button', { name: `Signal ${decision.eligibilitySignal}` }),
+    ).not.toBeNull();
   });
 });

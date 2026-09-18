@@ -29,10 +29,23 @@ const METHODS: Array<{ id: Instrument; label: string }> = [
 
 export function CheckoutScreen() {
   const {
-    merchant, amount, setAmount, instrument, setInstrument,
-    decision, decisionLoading, decisionError,
-    nudgeCopy, nudgeCopyLoading, nudgeDismissed,
-    acceptNudge, declineNudge, payNormally, go, toggleDrawer, userId,
+    merchant,
+    amount,
+    setAmount,
+    instrument,
+    setInstrument,
+    decision,
+    decisionLoading,
+    decisionError,
+    nudgeCopy,
+    nudgeCopyLoading,
+    nudgeDismissed,
+    acceptNudge,
+    declineNudge,
+    payNormally,
+    go,
+    toggleDrawer,
+    userId,
   } = useApp();
 
   const person = personOrDefault(userId);

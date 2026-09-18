@@ -1,0 +1,5 @@
+.next
+node_modules
+drizzle
+n8n/cloud
+package-lock.json

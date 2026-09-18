@@ -2,12 +2,12 @@
 
 ## What runs where
 
-| Piece | Job | If it's missing |
-|---|---|---|
-| **Next.js app** | The decision engine + UI | — |
-| **n8n** | Runs the pipeline stage by stage; owns logging, retries, schedules | App calls `/api/decide` directly |
-| **Sarvam** | Writes the nudge line in the user's language | Templates (hi/en/ta/bn) |
-| **Cognee sidecar** | Remembers how each user answers offers | Local audit trail |
+| Piece              | Job                                                                | If it's missing                  |
+| ------------------ | ------------------------------------------------------------------ | -------------------------------- |
+| **Next.js app**    | The decision engine + UI                                           | —                                |
+| **n8n**            | Runs the pipeline stage by stage; owns logging, retries, schedules | App calls `/api/decide` directly |
+| **Sarvam**         | Writes the nudge line in the user's language                       | Templates (hi/en/ta/bn)          |
+| **Cognee sidecar** | Remembers how each user answers offers                             | Local audit trail                |
 
 Nothing is a hard dependency. Every integration falls back to something that works.
 
@@ -29,14 +29,14 @@ cd cognee-service && npm start    # http://localhost:4000  (optional)
 
 This is the part worth being precise about.
 
-| Data | Volume | Where it lives | Durable on Vercel? |
-|---|---|---|---|
-| 6 personas, 8 merchants | tiny | Code (`lib/people.ts`, `lib/personas.ts`) | n/a — demo fixtures |
-| Transaction ledgers | ~250 rows each | Generated at runtime from a seed | n/a — deterministic, never stored |
-| Nudge history (frequency cap) | tiny | Browser `localStorage` | client owns it by design |
-| Decision audit trail | grows | **Neon Postgres** (`decisions`), mirrored to `.data/decisions.jsonl` | **yes** when `DATABASE_URL` is set |
-| Offer outcomes | tiny | **Neon Postgres** (`nudge_events`) + Cognee for recall | **yes** |
-| Payments, credit accounts, EMI schedules | small | **Neon Postgres** (`payments`, `credit_accounts`, `emi_installments`); payments mirrored to `localStorage` | **yes** — and they feed the next decision |
+| Data                                     | Volume         | Where it lives                                                                                             | Durable on Vercel?                        |
+| ---------------------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| 6 personas, 8 merchants                  | tiny           | Code (`lib/people.ts`, `lib/personas.ts`)                                                                  | n/a — demo fixtures                       |
+| Transaction ledgers                      | ~250 rows each | Generated at runtime from a seed                                                                           | n/a — deterministic, never stored         |
+| Nudge history (frequency cap)            | tiny           | Browser `localStorage`                                                                                     | client owns it by design                  |
+| Decision audit trail                     | grows          | **Neon Postgres** (`decisions`), mirrored to `.data/decisions.jsonl`                                       | **yes** when `DATABASE_URL` is set        |
+| Offer outcomes                           | tiny           | **Neon Postgres** (`nudge_events`) + Cognee for recall                                                     | **yes**                                   |
+| Payments, credit accounts, EMI schedules | small          | **Neon Postgres** (`payments`, `credit_accounts`, `emi_installments`); payments mirrored to `localStorage` | **yes** — and they feed the next decision |
 
 **Locally, nothing needs a database.** Without `DATABASE_URL` the trail is the file
 plus an in-memory buffer, exactly as before — the database is additive.
@@ -110,11 +110,11 @@ recallMemory(userId) → { acceptedCount, declinedCount, declinedCategories }
                      → relevance score adjustment
 ```
 
-| Situation | Effect on relevance |
-|---|---|
-| Declined an offer in this category before | **−20** |
-| Declined elsewhere | **−8** |
-| Accepted before | **+5** |
+| Situation                                 | Effect on relevance |
+| ----------------------------------------- | ------------------- |
+| Declined an offer in this category before | **−20**             |
+| Declined elsewhere                        | **−8**              |
+| Accepted before                           | **+5**              |
 
 Verified end to end, app → n8n → engine stages → sidecar:
 
@@ -133,8 +133,8 @@ other hard gate — those stay deterministic.
 The sidecar writes every outcome twice: into Cognee's graph (semantic, explorable)
 and into a structured ledger (exact). **`/recall` answers from the ledger.**
 
-A graph query returns generated prose. Prose is a fine way to *explore* a user's
-history and a terrible way to *justify* a lending decision — you cannot audit it,
+A graph query returns generated prose. Prose is a fine way to _explore_ a user's
+history and a terrible way to _justify_ a lending decision — you cannot audit it,
 and nothing stops it being subtly wrong. There is a `/ask` endpoint for querying
 the graph in plain language; it is deliberately not wired into scoring.
 
@@ -169,12 +169,12 @@ Transaction event
   → Respond → Log decision ─┘
 ```
 
-| # | Workflow | Trigger | Demonstrates |
-|---|---|---|---|
-| 1 | Decision pipeline (16 nodes) | Webhook | Branching, retries, error branches, async logging |
-| 2 | Outcome recorder | Webhook | Validation, memory write, closing the funnel |
-| 3 | Sarvam copy pre-warm | 3am + manual | Fan-out, batching |
-| 4 | Daily funnel digest | 9am + manual | Aggregation, file output |
+| #   | Workflow                     | Trigger      | Demonstrates                                      |
+| --- | ---------------------------- | ------------ | ------------------------------------------------- |
+| 1   | Decision pipeline (16 nodes) | Webhook      | Branching, retries, error branches, async logging |
+| 2   | Outcome recorder             | Webhook      | Validation, memory write, closing the funnel      |
+| 3   | Sarvam copy pre-warm         | 3am + manual | Fan-out, batching                                 |
+| 4   | Daily funnel digest          | 9am + manual | Aggregation, file output                          |
 
 ### Moving to n8n Cloud
 
@@ -235,8 +235,8 @@ network dies, everything runs on `localhost` and the app falls back automaticall
 **The n8n moment.** Open workflow 1 on the canvas in a second tab, then hit the app.
 Sixteen nodes light up in sequence. Don't let that get lost mid-demo.
 
-**Show restraint.** Switch to Priya: *eligible on paper, declined because ₹8,727/month
-exceeds the ₹7,951 she can carry.* An engine that says no is more convincing than one
+**Show restraint.** Switch to Priya: _eligible on paper, declined because ₹8,727/month
+exceeds the ₹7,951 she can carry._ An engine that says no is more convincing than one
 that always says yes.
 
 ---

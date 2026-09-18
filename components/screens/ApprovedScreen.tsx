@@ -39,7 +39,8 @@ export function ApprovedScreen() {
             {offer.partner}
           </h2>
           <p className="mt-2 text-[12px] text-muted">
-            Credit limit up to <span className="font-semibold text-body">{formatINR(offer.limit)}</span>
+            Credit limit up to{' '}
+            <span className="font-semibold text-body">{formatINR(offer.limit)}</span>
           </p>
         </motion.div>
 
@@ -132,9 +133,7 @@ function PlanRow({
       </span>
       {option.noCost ? <Pill tone="good">No cost</Pill> : null}
       {option.lastEmi !== option.emi ? (
-        <span className="shrink-0 text-[10px] text-faint">
-          last {formatINR(option.lastEmi)}
-        </span>
+        <span className="shrink-0 text-[10px] text-faint">last {formatINR(option.lastEmi)}</span>
       ) : null}
       <span className="sr-only">{formatINR(amount)} total</span>
     </button>

@@ -37,7 +37,9 @@ export function DynamicQr({ merchants }: { merchants: Merchant[] }) {
   }, [issued]);
 
   const merchant = merchants.find((candidate) => candidate.id === merchantId);
-  const secondsLeft = issued ? Math.max(0, Math.round((Date.parse(issued.expiresAt) - now) / 1_000)) : 0;
+  const secondsLeft = issued
+    ? Math.max(0, Math.round((Date.parse(issued.expiresAt) - now) / 1_000))
+    : 0;
 
   async function generate() {
     setBusy(true);
@@ -129,8 +131,8 @@ export function DynamicQr({ merchants }: { merchants: Merchant[] }) {
                 : `Payable for ${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`}
             </p>
             <p className="mt-2 text-[10px] text-faint">
-              Signed intent, stored as a row — the image is rendered from it. Scanning fixes the amount
-              at checkout; paying marks it paid; scanning again is refused.
+              Signed intent, stored as a row — the image is rendered from it. Scanning fixes the
+              amount at checkout; paying marks it paid; scanning again is refused.
             </p>
             <code className="mt-2 block break-all font-mono text-[8px] leading-tight text-faint/70">
               {issued.payload}

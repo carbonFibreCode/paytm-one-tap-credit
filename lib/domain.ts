@@ -34,7 +34,14 @@ export type ProductId = (typeof PRODUCT_IDS)[number];
 export const LANGUAGES = ['hi', 'en', 'ta', 'bn'] as const;
 export type Language = (typeof LANGUAGES)[number];
 
-export const INSTRUMENTS = ['upi', 'wallet', 'debit_card', 'credit_card', 'postpaid', 'netbanking'] as const;
+export const INSTRUMENTS = [
+  'upi',
+  'wallet',
+  'debit_card',
+  'credit_card',
+  'postpaid',
+  'netbanking',
+] as const;
 export type Instrument = (typeof INSTRUMENTS)[number];
 
 export const NUDGE_OUTCOMES = ['shown', 'accepted', 'declined'] as const;
@@ -69,18 +76,78 @@ export interface CategoryMeta {
 }
 
 export const CATEGORY_META: Record<MerchantCategory, CategoryMeta> = {
-  electronics: { label: 'Electronics', mcc: '5732', relevance: 0.9, discretionary: true, prohibited: false },
+  electronics: {
+    label: 'Electronics',
+    mcc: '5732',
+    relevance: 0.9,
+    discretionary: true,
+    prohibited: false,
+  },
   travel: { label: 'Travel', mcc: '4722', relevance: 0.85, discretionary: true, prohibited: false },
-  jewellery: { label: 'Jewellery', mcc: '5944', relevance: 0.8, discretionary: true, prohibited: false },
-  apparel: { label: 'Apparel', mcc: '5651', relevance: 0.45, discretionary: true, prohibited: false },
-  healthcare: { label: 'Healthcare', mcc: '5912', relevance: 0.6, discretionary: true, prohibited: false },
-  grocery: { label: 'Groceries', mcc: '5411', relevance: 0.15, discretionary: false, prohibited: false },
+  jewellery: {
+    label: 'Jewellery',
+    mcc: '5944',
+    relevance: 0.8,
+    discretionary: true,
+    prohibited: false,
+  },
+  apparel: {
+    label: 'Apparel',
+    mcc: '5651',
+    relevance: 0.45,
+    discretionary: true,
+    prohibited: false,
+  },
+  healthcare: {
+    label: 'Healthcare',
+    mcc: '5912',
+    relevance: 0.6,
+    discretionary: true,
+    prohibited: false,
+  },
+  grocery: {
+    label: 'Groceries',
+    mcc: '5411',
+    relevance: 0.15,
+    discretionary: false,
+    prohibited: false,
+  },
   fuel: { label: 'Fuel', mcc: '5541', relevance: 0.1, discretionary: false, prohibited: false },
-  bills: { label: 'Bill payments', mcc: '4900', relevance: 0.15, discretionary: false, prohibited: false },
-  p2p: { label: 'Person-to-person transfers', mcc: '0000', relevance: 0, discretionary: false, prohibited: true },
-  wallet_load: { label: 'Wallet top-ups', mcc: '6540', relevance: 0, discretionary: false, prohibited: true },
-  gambling: { label: 'Gaming and betting', mcc: '7995', relevance: 0, discretionary: false, prohibited: true },
-  crypto: { label: 'Crypto purchases', mcc: '6051', relevance: 0, discretionary: false, prohibited: true },
+  bills: {
+    label: 'Bill payments',
+    mcc: '4900',
+    relevance: 0.15,
+    discretionary: false,
+    prohibited: false,
+  },
+  p2p: {
+    label: 'Person-to-person transfers',
+    mcc: '0000',
+    relevance: 0,
+    discretionary: false,
+    prohibited: true,
+  },
+  wallet_load: {
+    label: 'Wallet top-ups',
+    mcc: '6540',
+    relevance: 0,
+    discretionary: false,
+    prohibited: true,
+  },
+  gambling: {
+    label: 'Gaming and betting',
+    mcc: '7995',
+    relevance: 0,
+    discretionary: false,
+    prohibited: true,
+  },
+  crypto: {
+    label: 'Crypto purchases',
+    mcc: '6051',
+    relevance: 0,
+    discretionary: false,
+    prohibited: true,
+  },
 };
 
 export const DISCRETIONARY_CATEGORIES = MERCHANT_CATEGORIES.filter(

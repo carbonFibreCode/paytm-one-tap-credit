@@ -282,7 +282,9 @@ export function ScannerScreen() {
 
         {camera === 'live' && !locked ? (
           <p className="absolute inset-x-0 bottom-4 text-center text-[10px] text-white/70">
-            {canDecode ? 'Point at a QR code' : 'Camera on · tap a merchant below to simulate a scan'}
+            {canDecode
+              ? 'Point at a QR code'
+              : 'Camera on · tap a merchant below to simulate a scan'}
           </p>
         ) : null}
       </div>

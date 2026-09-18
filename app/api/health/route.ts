@@ -18,7 +18,11 @@ async function databaseStatus() {
   try {
     return { configured: true as const, reachable: true as const, ...(await countRecords()) };
   } catch (error) {
-    return { configured: true as const, reachable: false as const, error: (error as Error).message };
+    return {
+      configured: true as const,
+      reachable: false as const,
+      error: (error as Error).message,
+    };
   }
 }
 

@@ -13,7 +13,6 @@ export function SuccessScreen() {
 
   return (
     <div className="flex h-full flex-col">
-
       <div className="scroll-slim pt-safe flex-1 overflow-y-auto px-5 pb-4">
         <div className="flex flex-col items-center text-center">
           <AnimatedCheck />
@@ -94,7 +93,11 @@ export function SuccessScreen() {
             transition={{ delay: 0.55 }}
             className="mt-8 text-center text-[12px] leading-relaxed text-faint"
           >
-            Paid in full{payment.method === 'wallet' ? ' from your Paytm Balance' : ' from your linked bank account'}.
+            Paid in full
+            {payment.method === 'wallet'
+              ? ' from your Paytm Balance'
+              : ' from your linked bank account'}
+            .
             <br />
             No credit offer was taken.
           </motion.p>

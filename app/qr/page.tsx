@@ -52,9 +52,9 @@ export default async function QrPage() {
       <header className="mb-8">
         <h1 className="text-[22px] font-semibold text-body">Merchant QR codes</h1>
         <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-muted">
-          Each code is a standard UPI intent — the same shape a real Paytm merchant QR carries.
-          Open the app on a phone, tap <strong>Scan &amp; Pay</strong>, allow the camera, and point
-          it at one of these.
+          Each code is a standard UPI intent — the same shape a real Paytm merchant QR carries. Open
+          the app on a phone, tap <strong>Scan &amp; Pay</strong>, allow the camera, and point it at
+          one of these.
         </p>
         <p className="mt-2 text-[11px] text-faint">
           {signed
@@ -69,7 +69,9 @@ export default async function QrPage() {
 
       {signed ? (
         <section className="mb-8">
-          <h2 className="mb-2 text-[13px] font-semibold text-body">Bill QR — the merchant&rsquo;s till</h2>
+          <h2 className="mb-2 text-[13px] font-semibold text-body">
+            Bill QR — the merchant&rsquo;s till
+          </h2>
           <DynamicQr merchants={MERCHANTS} />
         </section>
       ) : null}
@@ -111,7 +113,9 @@ export default async function QrPage() {
             />
 
             <p className="mt-2 text-[9px] leading-relaxed text-faint">
-              {merchant.creditEnabled ? merchant.blurb : `${merchant.blurb} · outside credit network`}
+              {merchant.creditEnabled
+                ? merchant.blurb
+                : `${merchant.blurb} · outside credit network`}
               {intent ? (
                 <>
                   {' · '}

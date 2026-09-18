@@ -30,7 +30,18 @@ import { getMerchant, type Merchant } from '../fixtures/merchants';
 import { getPersona } from '../fixtures/personas';
 import { ApiError, unknown as unknownEntity } from './route';
 
-export { emiOption, instrument, isoTimestamp, language, merchantCategory, nudgeHistory, nudgeOutcome, paymentMethod, productId, rupees };
+export {
+  emiOption,
+  instrument,
+  isoTimestamp,
+  language,
+  merchantCategory,
+  nudgeHistory,
+  nudgeOutcome,
+  paymentMethod,
+  productId,
+  rupees,
+};
 
 // ---------------------------------------------------------------------------
 // Bodies
@@ -94,7 +105,9 @@ export const auditBody = z.object({
   outcome: nudgeOutcome.optional(),
   nudgeSource: z.string().optional(),
   /** The engine's own breakdown, passed through whole; shape is the engine's to define. */
-  trace: z.custom<Record<string, unknown>>((value) => typeof value === 'object' && value !== null).optional(),
+  trace: z
+    .custom<Record<string, unknown>>((value) => typeof value === 'object' && value !== null)
+    .optional(),
   engineVersion: z.string().optional(),
   /** Supplied by the caller so the entry reflects when the decision happened. */
   at: isoTimestamp.optional(),
@@ -118,7 +131,12 @@ export const recallBody = z.object({
 export const intentBody = z.object({
   merchantId: z.string().min(1),
   amount: rupees,
-  ttlMinutes: z.number().int().min(1).max(24 * 60).optional(),
+  ttlMinutes: z
+    .number()
+    .int()
+    .min(1)
+    .max(24 * 60)
+    .optional(),
 });
 
 export const scanBody = z.object({ payload: z.string().min(1) });
@@ -144,9 +162,10 @@ export const profileShape = z
   .loose()
   .transform((value) => value as unknown as UserProfile);
 
-export const nudgeHistoryShape = z.array(
-  z.object({ product: productId, decidedAt: z.string(), outcome: nudgeOutcome }),
-).optional().default([]);
+export const nudgeHistoryShape = z
+  .array(z.object({ product: productId, decidedAt: z.string(), outcome: nudgeOutcome }))
+  .optional()
+  .default([]);
 
 /** Prior outcomes recalled from the memory layer, used to temper relevance. */
 export const memoryShape = z

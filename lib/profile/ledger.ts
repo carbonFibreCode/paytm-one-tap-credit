@@ -153,10 +153,11 @@ export function generateLedger(spec: PersonaSpec, asOf: string): LedgerEntry[] {
   };
 
   // Walk month by month from the month containing `startDate` up to `asOf`.
-  const monthCount =
-    Math.ceil(spec.accountAgeDays / 30) + 1;
+  const monthCount = Math.ceil(spec.accountAgeDays / 30) + 1;
   const firstOfWindow = toISODate(
-    new Date(Date.UTC(parseDate(startDate).getUTCFullYear(), parseDate(startDate).getUTCMonth(), 1)),
+    new Date(
+      Date.UTC(parseDate(startDate).getUTCFullYear(), parseDate(startDate).getUTCMonth(), 1),
+    ),
   );
 
   const normalisedMix = normaliseMix(spec.discretionaryMix);
@@ -189,10 +190,24 @@ export function generateLedger(spec: PersonaSpec, asOf: string): LedgerEntry[] {
     // Fixed obligations — identical merchant and amount every month, which is
     // exactly the signature the recurrence detector keys on.
     if (spec.rent > 0) {
-      push(setDay(monthStart, Math.min(lastDay, 5)), 'debit', spec.rent, 'rent', 'House Rent', 'netbanking');
+      push(
+        setDay(monthStart, Math.min(lastDay, 5)),
+        'debit',
+        spec.rent,
+        'rent',
+        'House Rent',
+        'netbanking',
+      );
     }
     for (const emi of spec.emis) {
-      push(setDay(monthStart, Math.min(lastDay, 7)), 'debit', emi.amount, 'emi', emi.merchant, 'netbanking');
+      push(
+        setDay(monthStart, Math.min(lastDay, 7)),
+        'debit',
+        emi.amount,
+        'emi',
+        emi.merchant,
+        'netbanking',
+      );
     }
 
     // Essentials — a handful of small, unremarkable payments.

@@ -62,9 +62,7 @@ export function detectSalary(entries: LedgerEntry[]): {
   // Anchor on the median credit, then keep everything clustered around it.
   const sorted = [...credits].sort((a, b) => a.amount - b.amount);
   const median = sorted[Math.floor(sorted.length / 2)].amount;
-  const salaryEntries = credits.filter(
-    (entry) => Math.abs(entry.amount - median) <= median * 0.15,
-  );
+  const salaryEntries = credits.filter((entry) => Math.abs(entry.amount - median) <= median * 0.15);
 
   const months = new Set(salaryEntries.map((entry) => monthKey(entry.date)));
   if (salaryEntries.length === 0 || months.size < RECURRENCE_THRESHOLD) {
@@ -195,7 +193,9 @@ export function computeFeatures(
   const onTimeRepaymentRate =
     creditRecord.priorRepayments === 0
       ? 0
-      : clamp((creditRecord.priorRepayments - creditRecord.latePayments) / creditRecord.priorRepayments);
+      : clamp(
+          (creditRecord.priorRepayments - creditRecord.latePayments) / creditRecord.priorRepayments,
+        );
 
   const disposableMonthly = Math.max(0, avgMonthlyInflow - fixedMonthlyOutflow);
   const affordabilityCapacity = Math.round(disposableMonthly * FOIR_CAP);

@@ -15,10 +15,7 @@
       "name": "Every morning at 9am",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [
-        -380,
-        300
-      ]
+      "position": [-380, 300]
     },
     {
       "parameters": {
@@ -44,10 +41,7 @@
       "name": "Read the audit trail",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        -160,
-        300
-      ],
+      "position": [-160, 300],
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 500
@@ -60,10 +54,7 @@
       "name": "Format digest",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        60,
-        300
-      ]
+      "position": [60, 300]
     },
     {
       "parameters": {
@@ -77,10 +68,7 @@
       "name": "Convert to file",
       "type": "n8n-nodes-base.convertToFile",
       "typeVersion": 1.1,
-      "position": [
-        280,
-        300
-      ]
+      "position": [280, 300]
     },
     {
       "parameters": {
@@ -92,10 +80,7 @@
       "name": "Write digest to disk",
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1,
-      "position": [
-        500,
-        300
-      ]
+      "position": [500, 300]
     },
     {
       "parameters": {},
@@ -103,10 +88,7 @@
       "name": "Run now (manual)",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "position": [
-        -380,
-        460
-      ]
+      "position": [-380, 460]
     }
   ],
   "connections": {

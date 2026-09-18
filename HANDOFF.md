@@ -1,7 +1,7 @@
 # Handoff — One-Tap Credit
 
 Context for picking this up in a fresh session. Read `SETUP.md` for how to run
-things; this file is *what exists and why*.
+things; this file is _what exists and why_.
 
 ---
 
@@ -9,7 +9,7 @@ things; this file is *what exists and why*.
 
 **Paytm Build for India AI Hackathon — Delhi Edition, Track 2.** Event is
 **19 Sep 2026**, 8 hours on-site at Paytm Noida, but the venue day is
-*showcase + presentation + final touch-ups*, so the build happens beforehand.
+_showcase + presentation + final touch-ups_, so the build happens beforehand.
 Team: Arun Kumar (builds) + Vivek Goswami (presents).
 
 **The idea:** at the moment of payment, decide in real time whether to surface a
@@ -24,14 +24,14 @@ are the other sponsors; credits provided for n8n and Cognee.
 
 ## Live
 
-| | |
-|---|---|
-| App | https://paytm-one-tap-credit.vercel.app |
-| QR codes | https://paytm-one-tap-credit.vercel.app/qr |
-| Repo | `carbonFibreCode/paytm-one-tap-credit` (private) |
-| Vercel | `Arun Kumar's projects` scope, GitHub connected, auto-deploys on push to `main` |
-| Tests | 61 passing, ~1s |
-| Source | ~7,900 lines |
+|          |                                                                                 |
+| -------- | ------------------------------------------------------------------------------- |
+| App      | https://paytm-one-tap-credit.vercel.app                                         |
+| QR codes | https://paytm-one-tap-credit.vercel.app/qr                                      |
+| Repo     | `carbonFibreCode/paytm-one-tap-credit` (private)                                |
+| Vercel   | `Arun Kumar's projects` scope, GitHub connected, auto-deploys on push to `main` |
+| Tests    | 61 passing, ~1s                                                                 |
+| Source   | ~7,900 lines                                                                    |
 
 ---
 
@@ -60,7 +60,7 @@ deliberate:
 
 ### The memory layer is derived, not declared
 
-Each persona has a seeded 200–250 row transaction ledger. Salary is *detected*
+Each persona has a seeded 200–250 row transaction ledger. Salary is _detected_
 by finding repeated similar-sized credits; existing EMIs by finding the same
 merchant charging the same amount across ≥3 months. Those derive
 `affordabilityCapacity`, which the affordability gate checks. So three gates are
@@ -69,7 +69,7 @@ grounded in behaviour rather than a hardcoded flag.
 ### n8n orchestrates every stage
 
 The engine is also exposed as four HTTP stages (`/api/engine/profile`, `gates`,
-`score`, `offer`) so the n8n canvas *is* the architecture diagram — 16 nodes,
+`score`, `offer`) so the n8n canvas _is_ the architecture diagram — 16 nodes,
 every branch and refusal visible. `/api/decide` remains the monolithic fallback,
 and the app falls back to it automatically if n8n does not answer in 3s.
 
@@ -87,9 +87,10 @@ platform-specific native addon that cannot run in a Vercel function. **Cognee
 Cloud's REST API is what we use**, called directly from the app.
 
 Traps already hit and fixed:
+
 - `/api/v1/remember` is **multipart/form-data**; `data` expects file uploads and
   `raw_data` is the text field. A JSON body is silently ignored and surfaces as
-  *"Either datasetId or datasetName must be provided"*.
+  _"Either datasetId or datasetName must be provided"_.
 - Search is **`searchType`** (camelCase), not the `search_type` the docs show.
 - Base URL is **per-tenant** (`https://<tenant>.aws.cognee.ai`), not
   `api.cognee.ai`.
@@ -132,14 +133,14 @@ the `active` field; activation silently fails unless `activeVersionId` matches
 
 ## Where data lives
 
-| Data | Volume | Where now | Durable on Vercel? |
-|---|---|---|---|
-| 6 personas, 8 merchants | tiny | code (`lib/people.ts`, `lib/personas.ts`) | n/a — static |
-| Transaction ledgers | ~250 rows each | **generated at runtime from a seed** | n/a — never stored |
-| Nudge history (frequency cap) | tiny | browser `localStorage` | client-owned by design |
-| Payment history | small | browser `localStorage` | client-owned |
-| Decision audit trail | grows | **Neon Postgres `decisions`**, mirrored to `.data/decisions.jsonl` | **yes** with `DATABASE_URL` |
-| Offer outcomes | tiny | **Neon Postgres `nudge_events`** + Cognee Cloud for recall | yes |
+| Data                          | Volume         | Where now                                                          | Durable on Vercel?          |
+| ----------------------------- | -------------- | ------------------------------------------------------------------ | --------------------------- |
+| 6 personas, 8 merchants       | tiny           | code (`lib/people.ts`, `lib/personas.ts`)                          | n/a — static                |
+| Transaction ledgers           | ~250 rows each | **generated at runtime from a seed**                               | n/a — never stored          |
+| Nudge history (frequency cap) | tiny           | browser `localStorage`                                             | client-owned by design      |
+| Payment history               | small          | browser `localStorage`                                             | client-owned                |
+| Decision audit trail          | grows          | **Neon Postgres `decisions`**, mirrored to `.data/decisions.jsonl` | **yes** with `DATABASE_URL` |
+| Offer outcomes                | tiny           | **Neon Postgres `nudge_events`** + Cognee Cloud for recall         | yes                         |
 
 ### Database — Phase 0 done (18 Sep)
 
@@ -161,7 +162,7 @@ Rules that shaped it, and should shape the next phases:
 - **Money is `integer` rupees.** Never `numeric(_,2)`; the no-cost EMI rounding
   depends on integer arithmetic.
 - **`transactionId` is deterministic** (`txn_<user>_<merchant>_<amount>`), so it
-  is stored as `decision_key`, indexed, *not* the primary key. Two scans of the
+  is stored as `decision_key`, indexed, _not_ the primary key. Two scans of the
   same amount are two rows.
 
 ### Database — Phase 1 done (18 Sep): the credit ledger
@@ -184,14 +185,14 @@ declined because of what it just lent.
 
 The engine still reads no database, but live credit exposed one latent bug in
 `lib/engine/decide.ts`, now fixed: the affordability gate checks the cheapest
-plan across *all* funding products, while the offer was built for the
+plan across _all_ funding products, while the offer was built for the
 preferred product only — so a user near capacity could be shown a Postpaid
 plan above the capacity the gate had just quoted. The offer now moves to the
 product that actually has a plan that fits, with the rationale saying why.
 `tests/credit.test.ts` asserts no offered instalment ever exceeds capacity.
 
 The client posts to `/api/payments` fire-and-forget from `confirmCredit()` and
-`payNormally()`; the demo drawer's **Reset user** clears nudge history *and*
+`payNormally()`; the demo drawer's **Reset user** clears nudge history _and_
 the user's payments and accounts, locally and on the server. The decision
 trail is never touched by a reset — it is append-only.
 
@@ -200,7 +201,7 @@ trail is never touched by a reset — it is append-only.
 ### Database — Phase 2 done (18 Sep): QR codes are payment intents
 
 **What fintechs actually do, and what this now does:** a QR is a rendering of
-a `upi://pay?…` string; the thing stored is the *intent* the string points to.
+a `upi://pay?…` string; the thing stored is the _intent_ the string points to.
 `payment_intents` holds one row per code — `ref` (the UPI `tr` parameter),
 merchant, VPA, MCC, amount (dynamic only), expiry (dynamic only), the exact
 signed `payload`, and a `created → scanned → paid / expired` status. The image
@@ -217,7 +218,7 @@ code stops verifying, which is the correct failure.
 checks the ref is one we issued and the payload is byte-for-byte what we
 issued, checks expiry and paid state, marks it `scanned` → the app locks on
 with `intentRef`. A refusal is shown in the viewfinder with its reason
-(*altered*, *expired*, *already paid*, *not ours*). If the server is
+(_altered_, _expired_, _already paid_, _not ours_). If the server is
 unreachable the local parse is trusted, as before — wifi cannot blank the
 scanner. `decisionOk` PATCHes the decision key onto the intent; the payment
 batch marks it `paid`. Chain: `payment_intents.decision_key` →

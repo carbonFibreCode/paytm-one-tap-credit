@@ -28,7 +28,10 @@ function secret(): string {
   if (configured) return configured;
   if (!warned) {
     warned = true;
-    log.warn({ event: 'signing.dev_key' }, 'QR_SIGNING_SECRET is not set — using the development key');
+    log.warn(
+      { event: 'signing.dev_key' },
+      'QR_SIGNING_SECRET is not set — using the development key',
+    );
   }
   return DEV_SECRET;
 }
