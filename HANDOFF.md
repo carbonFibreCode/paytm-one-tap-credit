@@ -30,8 +30,9 @@ are the other sponsors; credits provided for n8n and Cognee.
 | QR codes | https://paytm-one-tap-credit.vercel.app/qr                                      |
 | Repo     | `carbonFibreCode/paytm-one-tap-credit` (private)                                |
 | Vercel   | `Arun Kumar's projects` scope, GitHub connected, auto-deploys on push to `main` |
-| Tests    | 61 passing, ~1s                                                                 |
-| Source   | ~7,900 lines                                                                    |
+| Tests    | 627 passing, ~3s (`npm test`)                                                   |
+| CI       | GitHub Actions on every push: format, types, lint, tests, build                 |
+| Database | Neon `autumn-poetry-48959969`, ap-southeast-1, branch `production`              |
 
 ---
 
@@ -272,25 +273,121 @@ Showing restraint is the credibility beat. Full 9-step script in `README.md`.
 
 ---
 
-## Not done
+## Before the venue — tonight
 
-1. **n8n Cloud** — workflows retargeted and waiting in `n8n/cloud/`; needs
-   importing and activating in the browser
-2. **Sarvam key** — one env var; would make the live AI moment real
-3. **Deck screenshots** — slide 7 still has AI-generated mockups with mangled
-   text; the real app is strictly better
-4. **₹ glyph missing in the deck** — slides 9 and 10 read "814 crore",
-   "7,10,000 cr" with no currency symbol (LaTeX font issue)
-5. **Backup video** — 60–90s local screen recording, insurance against dead wifi
-6. **Rehearsal** — Vivek presents; he needs to have said it out loud
-7. **Error boundary** — no `app/error.tsx`; an uncaught render error would
-   white-screen the demo
-8. Measured production decision latency is ~325ms warm — worth surfacing on the
-   nudge card as a demonstrated claim
-9. **`DATABASE_URL` on Vercel** — the Neon project exists
-   (`autumn-poetry-48959969`, ap-southeast-1, branch `production`), migrations are
-   applied and the local app writes to it. The deployed app only does once the
-   pooled URL is in Vercel's env — check `/api/health` → `database.reachable`
+1. **Reset the database.** It currently holds test rows from the build
+   (`txn_e2e_*`, `txn_refactor_check`) and nine spent bill QRs.
+
+   ```bash
+   npm run db:reset -- --dry-run    # shows what goes, changes nothing
+   npm run db:reset -- --yes        # does it
+   ```
+
+   This truncates decisions, outcomes, payments, credit accounts, instalment
+   schedules and every bill QR, then recreates the eight static merchant codes
+   and **proves the recreated payloads are byte-identical**, so anything already
+   printed still scans. It prints which database it is pointed at first.
+
+2. **Clear the demo phone.** The reset cannot reach it: nudge history and
+   payments live in `localStorage` under `otc.nudge-history.v2` and
+   `otc.payments.v1`. If you rehearse on the phone and do not clear it, the
+   **frequency cap will suppress the headline nudge on stage** — one offer per
+   user per week is the rule, and it will be doing its job. Either clear the
+   site data in Chrome, or open the drawer and tap **Reset user** on each
+   persona you rehearsed with.
+
+3. **Decide the n8n story** — Cloud or local. `n8n/cloud/*.json` is retargeted
+   and waiting; importing and activating is browser work. Running it locally
+   works with the wifi unplugged, which is the safer demo, but the laptop has
+   to be the one serving. Either way the app falls back to the direct path in
+   3s, and the drawer shows which path served the decision.
+
+4. **Sarvam key** (optional, one env var). Without it nudge copy comes from
+   contextual templates and `source` says `template`. With it the multilingual
+   AI moment is live. The output validator is in force either way.
+
+5. **Record the backup video** — 60–90s, local screen capture of the six-scenario
+   script. Insurance against venue wifi, and the one item on this list that
+   cannot be done at the venue.
+
+6. **Rehearse with Vivek out loud.** He presents; the restraint beat — the
+   engine declining for five different reasons — is the part that needs saying
+   in his own words, not read.
+
+7. **Deck**: slide 7 still has AI-generated mockups with mangled text (the real
+   app screenshots are strictly better now), and slides 9 and 10 read
+   "814 crore" and "7,10,000 cr" with no ₹ glyph (LaTeX font issue).
+
+8. **Charge both devices, disable auto-lock on the phone**, and make sure the
+   phone has **Chrome** — QR decoding uses `BarcodeDetector`, which Safari does
+   not implement.
+
+---
+
+## At the venue
+
+**T-30 minutes — wake everything up.**
+
+```bash
+npm run warmup                      # the deployed app
+npm run warmup -- http://localhost:3000
+```
+
+Three things go cold and each costs about a second on the first request:
+
+|                         |                                                                                                                                                     |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Neon compute**        | suspends after ~5 minutes idle, and that is **not configurable on the free plan**. It _will_ be asleep if you set up and then talk for ten minutes. |
+| **Vercel lambda**       | cold starts after a quiet spell — first call measured ~600ms, warm ~185ms.                                                                          |
+| **Cognee recall cache** | in-process, so a cold start empties it; a miss falls through to the local trail rather than waiting.                                                |
+
+The slowest cold path is **`/qr` at ~4s** — it creates the static intents on
+first visit and renders eight codes server-side. Open it early and leave it
+open; it is instant afterwards.
+
+`warmup` hits each path twice and reports the _second_ timing, which is the
+number you will actually see. It then checks the four things that matter:
+database reachable, QR signing key set, a decision under 400ms, and a clean
+trail. **Run it again if you end up waiting more than five minutes to present.**
+
+**T-5 — one dry run, then reset.** Walk the headline scenario end to end, then
+`npm run db:reset -- --yes` and clear the phone again so the trail a judge sees
+starts empty.
+
+**Have open on the laptop:** `/qr` for scanning, and the backup video in
+another tab.
+
+---
+
+## If something breaks
+
+The architecture's one rule is that no dependency can break a payment. This is
+what each failure actually looks like, so nothing is a surprise.
+
+| What fails                      | What actually happens                                                                                                                                                                                                 | What you do                                                                                                       |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Venue wifi**                  | The phone cannot reach the app at all. Nothing degrades gracefully from this.                                                                                                                                         | Play the backup video. This is the only unrecoverable one.                                                        |
+| **Neon unreachable**            | Decisions still work — `liveCreditOrEmpty` logs and returns "no live credit", so affordability falls back to seed-derived capacity. The audit trail writes to the local file. `/api/health` shows `reachable: false`. | Carry on. Only the "borrow, then watch the gate tighten" beat is lost.                                            |
+| **n8n down or slow**            | 3s timeout, automatic fallback to `/api/decide`. The drawer shows `served by direct` and the reason.                                                                                                                  | Carry on, or flip to **direct API** in the drawer to skip the 3s wait.                                            |
+| **Sarvam rejects or times out** | Template copy renders, and the card says `template`. Any number the model invents is refused by the validator.                                                                                                        | Nothing. This is the designed path.                                                                               |
+| **QR will not scan**            | Safari has no `BarcodeDetector`; a dim or angled code fails on any phone.                                                                                                                                             | Tap the merchant from the list below the viewfinder — same flow, same decision.                                   |
+| **A bill QR is refused**        | Expected if it is already paid or past 15 minutes — the scanner says which.                                                                                                                                           | Generate a fresh one from `/qr`. Or make it the demo beat: a paid bill scanned twice is _supposed_ to be refused. |
+| **Render error**                | `app/error.tsx` shows a retry card inside the phone frame instead of a white screen.                                                                                                                                  | Tap **Try again**.                                                                                                |
+| **The nudge will not appear**   | Almost always the frequency cap from rehearsing.                                                                                                                                                                      | Drawer → **Reset user**. The trace names `FREQUENCY_CAP` and offers the same reset.                               |
+
+---
+
+## Still open, and honestly optional
+
+- n8n Cloud import (item 3 above) — the prize being chased, so worth the time
+  if there is any.
+- Measured production latency is **~185ms warm**, better than the ~325ms the
+  deck was written against. Worth saying out loud; it is now a demonstrated
+  number rather than a claim.
+- `AUDIT.md` lists what the refactor left open: pglite store tests, coverage
+  thresholds, the n8n code nodes, and the unauthenticated demo endpoints
+  (`DELETE /api/payments`, `POST /api/intents` — fine on a demo URL, not
+  beyond it).
 
 ---
 
@@ -307,3 +404,16 @@ Showing restraint is the credibility beat. Full 9-step script in `README.md`.
   silently puts everything in `$1`. Cost two debugging rounds.
 - **QR decoding needs Chrome** (`BarcodeDetector`); Safari has no support, so the
   merchant list below the viewfinder is the fallback.
+- **Neon scales to zero after ~5 minutes** on the free plan and the timeout is
+  not configurable there. Always `npm run warmup` before presenting.
+- **`decisions` is append-only** — a trigger rejects `UPDATE` and `DELETE`, by
+  design. A manual `delete from decisions` will fail; the reset script uses
+  `TRUNCATE`, which row-level triggers do not see.
+- **Never change `QR_SIGNING_SECRET` casually.** Every printed code is signed
+  with it; changing it makes all of them fail verification, which is correct
+  behaviour and a very confusing five minutes if it happens by accident.
+- **`localStorage` survives a database reset.** Two different stores, two
+  different resets — see step 2 of the venue checklist.
+- **CI needs Node 24** (vitest 5's floor is 22.12) and `npm run typecheck` runs
+  `next typegen` first, because `LayoutProps` only exists after Next generates
+  route types. Both cost a red CI run to find.

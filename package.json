@@ -15,7 +15,9 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "db:reset": "node --env-file=.env.local --import tsx scripts/reset-demo.ts",
+    "warmup": "node --env-file=.env.local --import tsx scripts/warmup.ts"
   },
   "dependencies": {
     "@neon/config": "^1.7.2",
