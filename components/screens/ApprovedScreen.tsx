@@ -6,8 +6,9 @@ import type { EmiOption } from '@/lib/types';
 import { useApp } from '@/lib/client/state';
 import { formatApr, formatINR, formatShortDate } from '@/lib/format';
 import { buildSchedule } from '@/lib/engine/emi';
-import type { Translate } from '@/lib/i18n';
+import type { MessageKey, Translate } from '@/lib/i18n';
 import { AppBar, Pill } from '../Chrome';
+import { PinSheet } from '../PinSheet';
 
 export function ApprovedScreen() {
   const { decision, amount, merchant, confirmCredit, go, t } = useApp();
@@ -17,6 +18,9 @@ export function ApprovedScreen() {
     const preferred = offer?.tenures.find((tenure) => tenure.noCost) ?? offer?.tenures[0];
     return preferred?.months ?? 3;
   });
+
+  const [consented, setConsented] = useState(false);
+  const [pinOpen, setPinOpen] = useState(false);
 
   if (!offer || !decision) return null;
 
@@ -64,6 +68,8 @@ export function ApprovedScreen() {
 
         <Schedule tenure={tenure} t={t} />
 
+        <KeyFactStatement partner={offer.partner} t={t} />
+
         <p className="mt-4 rounded-xl border border-line bg-surface/60 p-3 text-[10px] leading-relaxed text-faint">
           {t('approved.partnerNote')}
         </p>
@@ -76,10 +82,20 @@ export function ApprovedScreen() {
             {t('approved.perMonth', formatINR(tenure.emi), tenure.months)}
           </span>
         </div>
+        <label className="flex cursor-pointer items-start gap-2 text-[11px] leading-snug text-muted">
+          <input
+            type="checkbox"
+            checked={consented}
+            onChange={(event) => setConsented(event.target.checked)}
+            className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#00BAF2]"
+          />
+          {t('kfs.consent')}
+        </label>
         <button
           type="button"
-          onClick={() => confirmCredit(tenure)}
-          className="w-full rounded-2xl bg-brand py-3.5 text-[15px] font-semibold text-[#03253a] transition active:scale-[0.98]"
+          disabled={!consented}
+          onClick={() => setPinOpen(true)}
+          className="w-full rounded-2xl bg-brand py-3.5 text-[15px] font-semibold text-[#03253a] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-elevated disabled:text-faint"
         >
           {t('approved.confirm', formatINR(amount))}
         </button>
@@ -91,6 +107,45 @@ export function ApprovedScreen() {
           {t('approved.back', merchant?.name ?? t('approved.backFallback'))}
         </button>
       </div>
+
+      <PinSheet
+        open={pinOpen}
+        amount={amount}
+        payee={offer.partner}
+        onClose={() => setPinOpen(false)}
+        onAuthorised={() => {
+          setPinOpen(false);
+          confirmCredit(tenure);
+        }}
+      />
+    </div>
+  );
+}
+
+/** The fields the plan rows and schedule do not already state. */
+function KeyFactStatement({ partner, t }: { partner: string; t: Translate }) {
+  const rows: Array<[MessageKey, MessageKey | string]> = [
+    ['kfs.lender', partner],
+    ['kfs.coolingOff', 'kfs.coolingOffValue'],
+    ['kfs.lateFee', 'kfs.lateFeeValue'],
+    ['kfs.recovery', 'kfs.recoveryValue'],
+    ['kfs.grievance', 'kfs.grievanceValue'],
+  ];
+  return (
+    <div className="mt-3 rounded-2xl border border-line bg-surface p-3">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
+        {t('kfs.heading')}
+      </p>
+      <dl className="space-y-1.5">
+        {rows.map(([label, value]) => (
+          <div key={label} className="flex items-baseline justify-between gap-3 text-[11px]">
+            <dt className="shrink-0 text-faint">{t(label)}</dt>
+            <dd className="text-right text-muted">
+              {label === 'kfs.lender' ? value : t(value as MessageKey)}
+            </dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 }
