@@ -48,7 +48,7 @@ export const PERSONAS: Persona[] = [
       {
         id: 'postpaid',
         eligible: true,
-        active: false,
+        active: true,
         limit: 1_00_000,
         available: 1_00_000,
         partner: 'Paytm Postpaid',
@@ -56,7 +56,7 @@ export const PERSONAS: Persona[] = [
       {
         id: 'card',
         eligible: true,
-        active: false,
+        active: true,
         limit: 2_50_000,
         available: 2_50_000,
         partner: 'Paytm HDFC Bank Credit Card',

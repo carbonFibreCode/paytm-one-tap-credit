@@ -4,12 +4,13 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 import type { EmiOption } from '@/lib/types';
 import { useApp } from '@/lib/client/state';
-import { formatINR, formatShortDate } from '@/lib/format';
+import { formatApr, formatINR, formatShortDate } from '@/lib/format';
 import { buildSchedule } from '@/lib/engine/emi';
+import type { Translate } from '@/lib/i18n';
 import { AppBar, Pill } from '../Chrome';
 
 export function ApprovedScreen() {
-  const { decision, amount, merchant, confirmCredit, go } = useApp();
+  const { decision, amount, merchant, confirmCredit, go, t } = useApp();
   const offer = decision?.offer;
 
   const [selected, setSelected] = useState<number>(() => {
@@ -23,7 +24,7 @@ export function ApprovedScreen() {
 
   return (
     <div className="flex h-full flex-col">
-      <AppBar title="Set up in one tap" onBack={() => go('checkout')} />
+      <AppBar title={t('approved.title')} onBack={() => go('checkout')} />
 
       <div className="scroll-slim flex-1 overflow-y-auto px-5 pb-4">
         <motion.div
@@ -32,20 +33,20 @@ export function ApprovedScreen() {
           transition={{ duration: 0.3 }}
           className="rounded-2xl border border-brand/25 bg-gradient-to-b from-[#0d2a4a] to-surface p-5 text-center"
         >
-          <Pill tone="brand">Pre-approved</Pill>
+          <Pill tone="brand">{t('approved.preApproved')}</Pill>
           <h2 className="mt-3 text-[20px] font-semibold leading-tight text-white">
-            You&rsquo;re approved for
+            {t('approved.approvedFor')}
             <br />
             {offer.partner}
           </h2>
           <p className="mt-2 text-[12px] text-muted">
-            Credit limit up to{' '}
+            {t('approved.limitUpTo')}{' '}
             <span className="font-semibold text-body">{formatINR(offer.limit)}</span>
           </p>
         </motion.div>
 
         <h3 className="mb-2 mt-5 text-[12px] font-semibold uppercase tracking-wide text-muted">
-          Choose a plan
+          {t('approved.choosePlan')}
         </h3>
 
         <div className="space-y-2">
@@ -56,23 +57,23 @@ export function ApprovedScreen() {
               amount={amount}
               selected={option.months === selected}
               onSelect={() => setSelected(option.months)}
+              t={t}
             />
           ))}
         </div>
 
-        <Schedule tenure={tenure} />
+        <Schedule tenure={tenure} t={t} />
 
         <p className="mt-4 rounded-xl border border-line bg-surface/60 p-3 text-[10px] leading-relaxed text-faint">
-          Activation, KYC and the credit line itself are issued by the partner bank. In this
-          prototype that step is mocked — the decision layer is what we built.
+          {t('approved.partnerNote')}
         </p>
       </div>
 
       <div className="shrink-0 space-y-2 border-t border-line px-5 py-4">
         <div className="flex items-baseline justify-between text-[12px]">
-          <span className="text-muted">You&rsquo;ll pay</span>
+          <span className="text-muted">{t('approved.youWillPay')}</span>
           <span className="font-semibold text-body">
-            {formatINR(tenure.emi)}/month &middot; {tenure.months} months
+            {t('approved.perMonth', formatINR(tenure.emi), tenure.months)}
           </span>
         </div>
         <button
@@ -80,14 +81,14 @@ export function ApprovedScreen() {
           onClick={() => confirmCredit(tenure)}
           className="w-full rounded-2xl bg-brand py-3.5 text-[15px] font-semibold text-[#03253a] transition active:scale-[0.98]"
         >
-          One-tap setup &amp; pay {formatINR(amount)}
+          {t('approved.confirm', formatINR(amount))}
         </button>
         <button
           type="button"
           onClick={() => go('checkout')}
           className="w-full rounded-2xl py-2 text-[12px] font-medium text-muted transition hover:text-body"
         >
-          Back to {merchant?.name ?? 'payment'}
+          {t('approved.back', merchant?.name ?? t('approved.backFallback'))}
         </button>
       </div>
     </div>
@@ -99,11 +100,13 @@ function PlanRow({
   amount,
   selected,
   onSelect,
+  t,
 }: {
   option: EmiOption;
   amount: number;
   selected: boolean;
   onSelect: () => void;
+  t: Translate;
 }) {
   return (
     <button
@@ -123,17 +126,24 @@ function PlanRow({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-[14px] font-semibold text-body">
-          {option.months} months &middot; {formatINR(option.emi)}/mo
+          {t('approved.planRow', option.months, formatINR(option.emi))}
         </span>
         <span className="block text-[11px] text-muted">
           {option.noCost
-            ? 'No cost EMI — no interest or extra charges'
-            : `Total ${formatINR(option.total)} · ${formatINR(option.interest)} interest`}
+            ? t('approved.noCostPlan')
+            : t(
+                'approved.interestPlan',
+                formatINR(option.total),
+                formatINR(option.interest),
+                formatApr(option.apr),
+              )}
         </span>
       </span>
-      {option.noCost ? <Pill tone="good">No cost</Pill> : null}
+      {option.noCost ? <Pill tone="good">{t('approved.noCost')}</Pill> : null}
       {option.lastEmi !== option.emi ? (
-        <span className="shrink-0 text-[10px] text-faint">last {formatINR(option.lastEmi)}</span>
+        <span className="shrink-0 text-[10px] text-faint">
+          {t('approved.lastEmi', formatINR(option.lastEmi))}
+        </span>
       ) : null}
       <span className="sr-only">{formatINR(amount)} total</span>
     </button>
@@ -141,12 +151,12 @@ function PlanRow({
 }
 
 /** Real dates, real rounding — the last instalment is the one that differs. */
-export function Schedule({ tenure }: { tenure: EmiOption }) {
+export function Schedule({ tenure, t }: { tenure: EmiOption; t: Translate }) {
   const rows = buildSchedule(tenure);
   return (
     <div className="mt-4 rounded-2xl border border-line bg-surface p-3">
       <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
-        Repayment schedule
+        {t('approved.schedule')}
       </p>
       <ul className="space-y-1.5">
         {rows.map((row) => (
@@ -159,9 +169,10 @@ export function Schedule({ tenure }: { tenure: EmiOption }) {
         ))}
       </ul>
       <div className="mt-2 flex items-baseline justify-between border-t border-line pt-2 text-[12px]">
-        <span className="text-muted">Total</span>
+        <span className="text-muted">{t('approved.total')}</span>
         <span className="font-semibold tabular-nums text-body">{formatINR(tenure.total)}</span>
       </div>
+      <p className="mt-1.5 text-[10px] leading-relaxed text-faint">{t('approved.fees')}</p>
     </div>
   );
 }

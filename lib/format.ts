@@ -14,6 +14,11 @@ export function formatINR(value: number): string {
   return INR.format(Math.round(value));
 }
 
+/** `15%` — APR is carried as a fraction and shown to one decimal at most. */
+export function formatApr(apr: number): string {
+  return `${Math.round(apr * 1000) / 10}%`;
+}
+
 /** `50,000` — when the ₹ symbol is rendered separately. */
 export function formatAmount(value: number): string {
   return Math.round(value).toLocaleString('en-IN');

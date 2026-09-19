@@ -17,14 +17,15 @@ import { BadgeCheck, ChevronRight } from 'lucide-react';
 import type { Instrument } from '@/lib/types';
 import { useApp } from '@/lib/client/state';
 import { amountInWords, formatINR, gateReason } from '@/lib/format';
+import type { MessageKey } from '@/lib/i18n';
 import { personOrDefault } from '@/lib/fixtures/people';
 import { AppBar, Monogram, Pill } from '../Chrome';
 import { NudgeCard } from '../NudgeCard';
 
-const METHODS: Array<{ id: Instrument; label: string }> = [
-  { id: 'upi', label: 'UPI' },
-  { id: 'wallet', label: 'Paytm Balance' },
-  { id: 'debit_card', label: 'Debit card' },
+const METHODS: Array<{ id: Instrument; label: MessageKey }> = [
+  { id: 'upi', label: 'checkout.upi' },
+  { id: 'wallet', label: 'checkout.wallet' },
+  { id: 'debit_card', label: 'checkout.debitCard' },
 ];
 
 export function CheckoutScreen() {
@@ -47,6 +48,7 @@ export function CheckoutScreen() {
     toggleDrawer,
     userId,
     explainMode,
+    t,
   } = useApp();
 
   const person = personOrDefault(userId);
@@ -75,7 +77,7 @@ export function CheckoutScreen() {
   return (
     <div className="flex h-full flex-col">
       <AppBar
-        title="Payment"
+        title={t('checkout.title')}
         onBack={() => go('home')}
         right={
           explainMode ? (
@@ -100,7 +102,7 @@ export function CheckoutScreen() {
             <BadgeCheck size={15} className="text-brand" aria-label="Verified" />
           ) : null}
         </p>
-        <p className="text-[10px] text-muted">Verified name · A/c linked on Paytm</p>
+        <p className="text-[10px] text-muted">{t('checkout.verified')}</p>
 
         <div className="mt-4 flex items-start gap-1">
           <span className="mt-2 text-[22px] font-light text-muted">₹</span>
@@ -139,7 +141,7 @@ export function CheckoutScreen() {
                   : 'border-line bg-elevated text-muted hover:text-body'
               }`}
             >
-              {method.label}
+              {t(method.label)}
             </button>
           ))}
         </div>
@@ -147,7 +149,7 @@ export function CheckoutScreen() {
 
         {decisionError ? (
           <p className="mt-2 w-full rounded-xl border border-bad/30 bg-bad/10 p-2 text-[11px] text-bad">
-            Could not score this transaction — {decisionError}
+            {t('checkout.scoreFailed', decisionError)}
           </p>
         ) : null}
       </div>
@@ -161,16 +163,16 @@ export function CheckoutScreen() {
             disabled={shortOnWallet || amount <= 0}
             className="w-full rounded-2xl bg-brand-deep py-3.5 text-[15px] font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-elevated disabled:text-faint"
           >
-            {shortOnWallet ? 'Insufficient Paytm Balance' : 'Proceed securely'}
+            {shortOnWallet ? t('checkout.insufficient') : t('checkout.proceed')}
           </button>
           {shortOnWallet ? (
             <p className="mt-1.5 text-center text-[10px] text-warn">
-              Short by {formatINR(amount - person.balance)}. Switch to UPI, or use the offer above.
+              {t('checkout.shortBy', formatINR(amount - person.balance))}
             </p>
           ) : null}
         </div>
 
-        <Keypad onPress={press} />
+        <Keypad onPress={press} deleteLabel={t('checkout.deleteDigit')} />
       </div>
     </div>
   );
@@ -213,7 +215,7 @@ function EngineStrip() {
   );
 }
 
-function Keypad({ onPress }: { onPress: (key: string) => void }) {
+function Keypad({ onPress, deleteLabel }: { onPress: (key: string) => void; deleteLabel: string }) {
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'back'];
   return (
     <div className="grid shrink-0 grid-cols-3 gap-px border-t border-line bg-line/40">
@@ -225,7 +227,7 @@ function Keypad({ onPress }: { onPress: (key: string) => void }) {
             key={index}
             type="button"
             onClick={() => onPress(key)}
-            aria-label={key === 'back' ? 'Delete last digit' : key}
+            aria-label={key === 'back' ? deleteLabel : key}
             className="bg-ink py-3 text-[19px] font-medium text-body transition active:bg-elevated"
           >
             {key === 'back' ? '⌫' : key}

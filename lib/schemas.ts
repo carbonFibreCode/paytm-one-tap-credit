@@ -52,6 +52,7 @@ export const emiOption = z.object({
   lastEmi: rupees,
   total: rupees,
   interest: z.number().int().nonnegative(),
+  apr: z.number().nonnegative().max(1, 'APR is a fraction, not a percentage'),
   noCost: z.boolean(),
   firstDueDate: isoDate,
 });

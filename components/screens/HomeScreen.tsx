@@ -37,31 +37,36 @@ import { MERCHANTS } from '@/lib/fixtures/merchants';
 import { personOrDefault } from '@/lib/fixtures/people';
 import { useApp } from '@/lib/client/state';
 import { formatINR } from '@/lib/format';
+import type { MessageKey } from '@/lib/i18n';
 import { Monogram } from '../Chrome';
 import { BottomNav } from '../BottomNav';
 import { Sheet } from '../Sheet';
 import { PaytmWordmark } from '../ui';
 
-const MONEY_TRANSFER: Array<{ icon: LucideIcon; label: string; action?: 'balance' }> = [
-  { icon: Smartphone, label: 'To Mobile' },
-  { icon: Landmark, label: 'To Bank' },
-  { icon: UserRound, label: 'To Self' },
-  { icon: Wallet, label: 'Balance', action: 'balance' },
+const MONEY_TRANSFER: Array<{
+  icon: LucideIcon;
+  label: MessageKey;
+  action?: 'balance';
+}> = [
+  { icon: Smartphone, label: 'home.toMobile' },
+  { icon: Landmark, label: 'home.toBank' },
+  { icon: UserRound, label: 'home.toSelf' },
+  { icon: Wallet, label: 'home.balance', action: 'balance' },
 ];
 
-const BILLS: Array<{ icon: LucideIcon; label: string; tint: string }> = [
-  { icon: Smartphone, label: 'Mobile', tint: '#00BAF2' },
-  { icon: Tv, label: 'DTH', tint: '#7C5CFF' },
-  { icon: Lightbulb, label: 'Electricity', tint: '#FFB020' },
-  { icon: CreditCard, label: 'Card Bill', tint: '#00C853' },
-  { icon: Droplets, label: 'Water', tint: '#38BDF8' },
-  { icon: Flame, label: 'Gas', tint: '#FF7043' },
-  { icon: Car, label: 'FASTag', tint: '#A3E635' },
-  { icon: ShieldCheck, label: 'Insurance', tint: '#F472B6' },
+const BILLS: Array<{ icon: LucideIcon; label: MessageKey; tint: string }> = [
+  { icon: Smartphone, label: 'home.billMobile', tint: '#00BAF2' },
+  { icon: Tv, label: 'home.billDth', tint: '#7C5CFF' },
+  { icon: Lightbulb, label: 'home.billElectricity', tint: '#FFB020' },
+  { icon: CreditCard, label: 'home.billCard', tint: '#00C853' },
+  { icon: Droplets, label: 'home.billWater', tint: '#38BDF8' },
+  { icon: Flame, label: 'home.billGas', tint: '#FF7043' },
+  { icon: Car, label: 'home.billFastag', tint: '#A3E635' },
+  { icon: ShieldCheck, label: 'home.billInsurance', tint: '#F472B6' },
 ];
 
 export function HomeScreen() {
-  const { selectMerchant, userId, go, toggleDrawer, toggleInfo } = useApp();
+  const { selectMerchant, userId, go, toggleDrawer, toggleInfo, t } = useApp();
   const person = personOrDefault(userId);
   const [balanceOpen, setBalanceOpen] = useState(false);
 
@@ -73,14 +78,14 @@ export function HomeScreen() {
           <button
             type="button"
             onClick={() => go('persona')}
-            aria-label="Switch profile"
+            aria-label={t('home.switchProfile')}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-[13px] font-semibold text-white transition active:scale-95"
           >
             {person.initials}
           </button>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] font-semibold text-white">
-              Hi, {person.displayName.split(' ')[0]}
+              {t('home.greeting', person.displayName.split(' ')[0])}
             </p>
             <p className="truncate text-[10px] text-white/55">{person.upiId}</p>
           </div>
@@ -88,7 +93,7 @@ export function HomeScreen() {
           <button
             type="button"
             onClick={() => toggleDrawer(true)}
-            aria-label="Demo controls"
+            aria-label={t('home.demoControls')}
             className="rounded-full p-1.5 text-white/80 transition hover:text-white active:scale-95"
           >
             <Bell size={17} />
@@ -97,7 +102,7 @@ export function HomeScreen() {
           <button
             type="button"
             onClick={() => toggleInfo(true)}
-            aria-label="Profile details"
+            aria-label={t('home.profileDetails')}
             className="rounded-full p-1.5 text-white/80 transition hover:text-brand active:scale-95"
           >
             <Info size={17} />
@@ -107,9 +112,7 @@ export function HomeScreen() {
         <div className="px-4 pb-4">
           <div className="flex items-center gap-2 rounded-xl bg-white/12 px-3 py-2.5">
             <Search size={15} className="shrink-0 text-white/60" aria-hidden="true" />
-            <span className="truncate text-[12px] text-white/60">
-              Search for a service or merchant
-            </span>
+            <span className="truncate text-[12px] text-white/60">{t('home.search')}</span>
           </div>
         </div>
       </div>
@@ -117,7 +120,7 @@ export function HomeScreen() {
       {/* --- scrolling body --- */}
       <div className="scroll-slim flex-1 overflow-y-auto pb-24">
         {/* money transfer */}
-        <Section title="Money Transfer">
+        <Section title={t('home.moneyTransfer')}>
           <div className="grid grid-cols-4 gap-2">
             {MONEY_TRANSFER.map(({ icon: Icon, label, action }) => (
               <button
@@ -129,7 +132,7 @@ export function HomeScreen() {
                 <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-line bg-surface text-brand">
                   <Icon size={19} />
                 </span>
-                <span className="text-center text-[10px] leading-tight text-muted">{label}</span>
+                <span className="text-center text-[10px] leading-tight text-muted">{t(label)}</span>
               </button>
             ))}
           </div>
@@ -146,17 +149,17 @@ export function HomeScreen() {
               <QrCode size={20} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[13px] font-semibold text-white">Scan &amp; Pay</span>
-              <span className="block text-[10px] text-white/60">
-                Pay any merchant QR, UPI or Paytm
+              <span className="block text-[13px] font-semibold text-white">
+                {t('home.scanAndPay')}
               </span>
+              <span className="block text-[10px] text-white/60">{t('home.scanBlurb')}</span>
             </span>
             <ChevronRight size={16} className="shrink-0 text-white/60" />
           </button>
         </div>
 
         {/* the wired path */}
-        <Section title="Pay these merchants" caption="Tap any merchant to open its payment screen">
+        <Section title={t('home.merchants')} caption={t('home.merchantsCaption')}>
           <div className="space-y-2">
             {MERCHANTS.map((merchant, index) => (
               <motion.button
@@ -184,7 +187,7 @@ export function HomeScreen() {
         </Section>
 
         {/* bills grid */}
-        <Section title="Recharge &amp; Bill Payments">
+        <Section title={t('home.bills')}>
           <div className="grid grid-cols-4 gap-y-4">
             {BILLS.map(({ icon: Icon, label, tint }) => (
               <div key={label} className="flex flex-col items-center gap-1.5">
@@ -194,7 +197,7 @@ export function HomeScreen() {
                 >
                   <Icon size={18} />
                 </span>
-                <span className="text-center text-[10px] leading-tight text-muted">{label}</span>
+                <span className="text-center text-[10px] leading-tight text-muted">{t(label)}</span>
               </div>
             ))}
           </div>
@@ -203,41 +206,41 @@ export function HomeScreen() {
         {/* offer strip */}
         <div className="px-4 pt-5">
           <div className="rounded-2xl border border-gold/20 bg-gradient-to-r from-gold/10 to-transparent p-3.5">
-            <p className="text-[11px] font-semibold text-gold">Paytm Postpaid</p>
-            <p className="mt-0.5 text-[11px] leading-snug text-muted">
-              Shop now, pay next month. Your limit is checked automatically at checkout.
-            </p>
+            <p className="text-[11px] font-semibold text-gold">{t('home.postpaid')}</p>
+            <p className="mt-0.5 text-[11px] leading-snug text-muted">{t('home.postpaidBlurb')}</p>
           </div>
         </div>
 
         <p className="px-6 pt-5 text-center text-[10px] leading-relaxed text-faint">
-          Prototype for the Paytm Build for India AI Hackathon.
+          {t('home.footerOne')}
           <br />
-          Only the merchant list and scanner are wired; the rest is visual.
+          {t('home.footerTwo')}
         </p>
       </div>
 
       <Sheet
         open={balanceOpen}
         onClose={() => setBalanceOpen(false)}
-        label="Paytm Balance"
+        label={t('balance.paytmBalance')}
         maxHeightClass="max-h-[60%]"
         header={
           <div className="flex items-center gap-2 px-5 pb-2 pt-1">
-            <h2 className="flex-1 text-[14px] font-semibold text-body">Balance &amp; accounts</h2>
+            <h2 className="flex-1 text-[14px] font-semibold text-body">{t('balance.title')}</h2>
             <button
               type="button"
               onClick={() => setBalanceOpen(false)}
               className="rounded-lg px-2 py-1 text-[11px] text-muted hover:text-body"
             >
-              Close
+              {t('balance.close')}
             </button>
           </div>
         }
       >
         <div className="space-y-3 px-5 pb-6 pt-2">
           <div className="rounded-2xl border border-brand/25 bg-gradient-to-br from-[#0d2a4a] to-surface p-4">
-            <p className="text-[10px] uppercase tracking-wide text-white/50">Paytm Balance</p>
+            <p className="text-[10px] uppercase tracking-wide text-white/50">
+              {t('balance.paytmBalance')}
+            </p>
             <p className="mt-1 text-[28px] font-semibold leading-none text-white">
               {formatINR(person.balance)}
             </p>
@@ -245,14 +248,13 @@ export function HomeScreen() {
           </div>
 
           <div className="rounded-2xl border border-line bg-surface p-3.5">
-            <p className="text-[10px] uppercase tracking-wide text-faint">Linked bank</p>
+            <p className="text-[10px] uppercase tracking-wide text-faint">
+              {t('balance.linkedBank')}
+            </p>
             <p className="mt-1 text-[13px] font-medium text-body">
               {person.bankName} &bull;&bull;{person.bankLast4}
             </p>
-            <p className="mt-1 text-[10px] leading-relaxed text-muted">
-              UPI payments draw on this account, not on your Paytm Balance — which is why a large
-              UPI payment succeeds where the wallet would fall short.
-            </p>
+            <p className="mt-1 text-[10px] leading-relaxed text-muted">{t('balance.bankNote')}</p>
           </div>
 
           <button
@@ -263,7 +265,7 @@ export function HomeScreen() {
             }}
             className="w-full rounded-2xl border border-line bg-elevated py-3 text-[13px] font-medium text-body transition active:scale-[0.98]"
           >
-            View payment history
+            {t('balance.viewHistory')}
           </button>
         </div>
       </Sheet>
