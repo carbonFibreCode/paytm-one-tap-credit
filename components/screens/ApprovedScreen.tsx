@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 import type { EmiOption } from '@/lib/types';
 import { useApp } from '@/lib/client/state';
-import { formatINR, formatShortDate } from '@/lib/format';
+import { formatApr, formatINR, formatShortDate } from '@/lib/format';
 import { buildSchedule } from '@/lib/engine/emi';
 import type { Translate } from '@/lib/i18n';
 import { AppBar, Pill } from '../Chrome';
@@ -131,7 +131,12 @@ function PlanRow({
         <span className="block text-[11px] text-muted">
           {option.noCost
             ? t('approved.noCostPlan')
-            : t('approved.interestPlan', formatINR(option.total), formatINR(option.interest))}
+            : t(
+                'approved.interestPlan',
+                formatINR(option.total),
+                formatINR(option.interest),
+                formatApr(option.apr),
+              )}
         </span>
       </span>
       {option.noCost ? <Pill tone="good">{t('approved.noCost')}</Pill> : null}
@@ -167,6 +172,7 @@ export function Schedule({ tenure, t }: { tenure: EmiOption; t: Translate }) {
         <span className="text-muted">{t('approved.total')}</span>
         <span className="font-semibold tabular-nums text-body">{formatINR(tenure.total)}</span>
       </div>
+      <p className="mt-1.5 text-[10px] leading-relaxed text-faint">{t('approved.fees')}</p>
     </div>
   );
 }

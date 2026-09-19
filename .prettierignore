@@ -3,3 +3,4 @@ node_modules
 drizzle
 n8n/cloud
 package-lock.json
+lib/i18n/catalogs.generated.ts

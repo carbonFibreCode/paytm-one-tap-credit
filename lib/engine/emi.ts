@@ -59,6 +59,8 @@ function buildOption(
       lastEmi,
       total: principal,
       interest: 0,
+      // The merchant funds the interest, so the customer's rate really is zero.
+      apr: 0,
       noCost: true,
       firstDueDate,
     };
@@ -73,6 +75,7 @@ function buildOption(
     lastEmi: emi,
     total,
     interest: total - principal,
+    apr,
     noCost: false,
     firstDueDate,
   };

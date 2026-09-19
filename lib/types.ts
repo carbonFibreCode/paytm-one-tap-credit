@@ -217,6 +217,8 @@ export interface EmiOption {
   lastEmi: number;
   total: number;
   interest: number;
+  /** Annualised rate as a fraction. Zero on a merchant-subsidised plan. */
+  apr: number;
   noCost: boolean;
   /** ISO date of the first instalment. */
   firstDueDate: string;
