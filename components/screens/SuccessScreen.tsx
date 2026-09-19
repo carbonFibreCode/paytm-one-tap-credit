@@ -6,7 +6,7 @@ import { formatINR, formatShortDate } from '@/lib/format';
 import { buildSchedule } from './ApprovedScreen';
 
 export function SuccessScreen() {
-  const { payment, go } = useApp();
+  const { payment, go, t } = useApp();
   if (!payment) return null;
 
   const paidOnCredit = payment.method === 'postpaid' || payment.method === 'card';
@@ -22,7 +22,7 @@ export function SuccessScreen() {
             transition={{ delay: 0.35 }}
             className="mt-4 text-[22px] font-semibold text-white"
           >
-            {formatINR(payment.amount)} paid
+            {t('success.paid', formatINR(payment.amount))}
           </motion.h2>
           <motion.p
             initial={{ opacity: 0 }}
@@ -30,14 +30,14 @@ export function SuccessScreen() {
             transition={{ delay: 0.45 }}
             className="mt-1 text-[13px] text-muted"
           >
-            to {payment.merchantName}
+            {t('success.to', payment.merchantName)}
             {paidOnCredit && payment.partner ? (
               <>
                 {' '}
-                via <span className="font-medium text-brand">{payment.partner}</span>
+                <span className="font-medium text-brand">{t('success.via', payment.partner)}</span>
               </>
             ) : (
-              ` via ${payment.method === 'wallet' ? 'Paytm Wallet' : 'UPI'}`
+              ` ${t('success.via', payment.method === 'wallet' ? t('success.wallet') : t('success.upi'))}`
             )}
           </motion.p>
         </div>
@@ -51,20 +51,20 @@ export function SuccessScreen() {
           >
             <div className="rounded-2xl border border-brand/25 bg-brand/5 p-4">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-brand">
-                Your plan
+                {t('success.yourPlan')}
               </p>
               <p className="mt-1 text-[15px] font-semibold text-body">
-                {payment.tenure.months} instalments of {formatINR(payment.tenure.emi)}
-                {payment.tenure.noCost ? ' · no cost' : ''}
+                {t('success.instalments', payment.tenure.months, formatINR(payment.tenure.emi))}
+                {payment.tenure.noCost ? ` · ${t('nudge.noCostSuffix')}` : ''}
               </p>
               <p className="mt-0.5 text-[11px] text-muted">
-                First instalment on {formatShortDate(payment.tenure.firstDueDate)}
+                {t('success.firstDue', formatShortDate(payment.tenure.firstDueDate))}
               </p>
             </div>
 
             <div className="mt-3 rounded-2xl border border-line bg-surface p-3">
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
-                Schedule
+                {t('success.schedule')}
               </p>
               <ul className="space-y-1.5">
                 {buildSchedule(payment.tenure).map((row) => (
@@ -81,9 +81,9 @@ export function SuccessScreen() {
             </div>
 
             <p className="mt-3 text-center text-[10px] leading-relaxed text-faint">
-              The credit line, KYC and repayment are handled by the partner bank.
+              {t('success.partnerNoteOne')}
               <br />
-              Mocked here — this prototype is the decision layer.
+              {t('success.partnerNoteTwo')}
             </p>
           </motion.div>
         ) : (
@@ -93,13 +93,10 @@ export function SuccessScreen() {
             transition={{ delay: 0.55 }}
             className="mt-8 text-center text-[12px] leading-relaxed text-faint"
           >
-            Paid in full
-            {payment.method === 'wallet'
-              ? ' from your Paytm Balance'
-              : ' from your linked bank account'}
-            .
+            {t('success.paidInFull')}{' '}
+            {payment.method === 'wallet' ? t('success.fromWallet') : t('success.fromBank')}.
             <br />
-            No credit offer was taken.
+            {t('success.noOffer')}
           </motion.p>
         )}
       </div>
@@ -110,7 +107,7 @@ export function SuccessScreen() {
           onClick={() => go('home')}
           className="w-full rounded-2xl border border-line bg-elevated py-3.5 text-[15px] font-semibold text-body transition active:scale-[0.98]"
         >
-          Done
+          {t('success.done')}
         </button>
       </div>
     </div>

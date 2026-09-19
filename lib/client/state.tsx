@@ -19,6 +19,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { EmiOption, Instrument, Language, NudgeHistoryEntry } from '../types';
+import { translator, type Translate } from '../i18n';
 import { getMerchant } from '../fixtures/merchants';
 import { personOrDefault } from '../fixtures/people';
 import {
@@ -53,6 +54,10 @@ interface Store extends State {
   history: NudgeHistoryEntry[];
   payments: PaymentRecord[];
   n8nAvailable: boolean;
+  /** The app's language — the drawer's override, else whose wallet this is. */
+  language: Language;
+  /** Translator bound to `language`; re-created only when the language moves. */
+  t: Translate;
   go: (screen: Screen) => void;
   selectMerchant: (merchantId: string, amount?: number, intentRef?: string) => void;
   setAmount: (amount: number) => void;
@@ -186,6 +191,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const decision = state.decision;
   const languageOverride = state.languageOverride;
+
+  // One switch moves the whole app: the chrome and the Sarvam nudge read the
+  // same value, so the UI can never sit in English around a Tamil offer.
+  const language = languageOverride ?? personOrDefault(state.userId).preferredLanguage;
+  const t = useMemo(() => translator(language), [language]);
   const needsCopy = Boolean(decision?.showNudge && decision.offer) && !state.nudgeCopy;
 
   useEffect(() => {
@@ -210,7 +220,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       months: headline.months,
       emi: headline.emi,
       noCost: headline.noCost,
-      language: languageOverride ?? personOrDefault(userId).preferredLanguage,
+      language,
     })
       .then((result) => {
         if (cancelled) return;
@@ -241,7 +251,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [needsCopy, decision, amount, merchantId, languageOverride, userId]);
+  }, [needsCopy, decision, amount, merchantId, language]);
 
   // --- actions -------------------------------------------------------------
 
@@ -295,6 +305,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toggleInfo: (open) => dispatch({ type: 'toggleInfo', open }),
       toggleTrace: (open) => dispatch({ type: 'toggleTrace', open }),
       toggleExplain: (on) => dispatch({ type: 'toggleExplain', on }),
+      language,
+      t,
 
       acceptNudge: () => {
         recordOutcome('accepted');
@@ -356,7 +368,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         resetUserCredit(state.userId);
       },
     };
-  }, [state, history, recordOutcome]);
+  }, [state, history, recordOutcome, language, t]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

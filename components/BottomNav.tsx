@@ -12,34 +12,34 @@ import { useApp } from '@/lib/client/state';
 import type { Screen } from '@/lib/client/state';
 
 export function BottomNav({ active }: { active: 'home' | 'scanner' | 'history' }) {
-  const { go } = useApp();
+  const { go, t } = useApp();
 
-  const items: Array<{ icon: typeof House; label: string; screen?: Screen }> = [
-    { icon: House, label: 'Home', screen: 'home' },
-    { icon: History, label: 'History', screen: 'history' },
-    { icon: Tag, label: 'Offers' },
-    { icon: UserRound, label: 'Profile', screen: 'persona' },
+  const items: Array<{ key: string; icon: typeof House; label: string; screen?: Screen }> = [
+    { key: 'home', icon: House, label: t('nav.home'), screen: 'home' },
+    { key: 'history', icon: History, label: t('nav.history'), screen: 'history' },
+    { key: 'offers', icon: Tag, label: t('nav.offers') },
+    { key: 'profile', icon: UserRound, label: t('nav.profile'), screen: 'persona' },
   ];
 
   return (
     <div className="relative shrink-0 border-t border-line bg-surface">
       <div className="pb-safe grid grid-cols-5 items-end px-2 pt-2">
-        {items.slice(0, 2).map((item) => (
-          <NavItem key={item.label} {...item} active={active} onGo={go} />
+        {items.slice(0, 2).map(({ key, ...item }) => (
+          <NavItem key={key} {...item} active={active} onGo={go} />
         ))}
 
         {/* Centre slot — the raised scan button sits above it. */}
         <div aria-hidden="true" />
 
-        {items.slice(2).map((item) => (
-          <NavItem key={item.label} {...item} active={active} onGo={go} />
+        {items.slice(2).map(({ key, ...item }) => (
+          <NavItem key={key} {...item} active={active} onGo={go} />
         ))}
       </div>
 
       <button
         type="button"
         onClick={() => go('scanner')}
-        aria-label="Scan any QR code"
+        aria-label={t('nav.scanAria')}
         className={`absolute -top-6 left-1/2 flex h-14 w-14 -translate-x-1/2 flex-col items-center justify-center rounded-full border-4 border-ink bg-brand text-[#03253a] shadow-[0_8px_24px_-4px_rgba(0,186,242,0.6)] transition active:scale-95 ${
           active === 'scanner' ? 'ring-2 ring-brand/50' : ''
         }`}
@@ -47,7 +47,7 @@ export function BottomNav({ active }: { active: 'home' | 'scanner' | 'history' }
         <ScanGlyph />
       </button>
       <span className="pointer-events-none absolute -bottom-0 left-1/2 w-20 -translate-x-1/2 text-center text-[9px] font-medium text-brand">
-        Scan
+        {t('nav.scan')}
       </span>
     </div>
   );
