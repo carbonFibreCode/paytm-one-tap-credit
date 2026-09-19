@@ -102,6 +102,25 @@ export const en = {
   'approved.back': 'Back to {0}',
   'approved.backFallback': 'payment',
 
+  // --- key fact statement --------------------------------------------------
+  'kfs.heading': 'Key Fact Statement',
+  'kfs.lender': 'Lender',
+  'kfs.coolingOff': 'Cooling-off period',
+  'kfs.coolingOffValue': '3 days — exit by repaying principal and proportionate APR, no penalty',
+  'kfs.lateFee': 'Late payment fee',
+  'kfs.lateFeeValue': '₹500 per missed instalment',
+  'kfs.recovery': 'Recovery',
+  'kfs.recoveryValue': 'By the partner bank, through your registered contact details only',
+  'kfs.grievance': 'Grievance officer',
+  'kfs.grievanceValue': 'grievance@paytmbank.example · 1800-000-0000',
+  'kfs.consent': 'I have read the Key Fact Statement and agree to the terms',
+
+  // --- pin -----------------------------------------------------------------
+  'pin.title': 'Enter UPI PIN',
+  'pin.payee': 'to {0}',
+  'pin.secured': 'Secured by your bank · never shared with Paytm',
+  'pin.entered': '{0} of {1} digits entered',
+
   // --- receipt -------------------------------------------------------------
   'success.paid': '{0} paid',
   'success.to': 'to {0}',

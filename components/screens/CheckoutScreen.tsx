@@ -12,6 +12,7 @@
  * key fires one decision rather than six.
  */
 
+import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { BadgeCheck, ChevronRight } from 'lucide-react';
 import type { Instrument } from '@/lib/types';
@@ -20,6 +21,8 @@ import { amountInWords, formatINR, gateReason } from '@/lib/format';
 import type { MessageKey } from '@/lib/i18n';
 import { personOrDefault } from '@/lib/fixtures/people';
 import { AppBar, Monogram, Pill } from '../Chrome';
+import { Keypad } from '../Keypad';
+import { PinSheet } from '../PinSheet';
 import { NudgeCard } from '../NudgeCard';
 
 const METHODS: Array<{ id: Instrument; label: MessageKey }> = [
@@ -52,6 +55,7 @@ export function CheckoutScreen() {
   } = useApp();
 
   const person = personOrDefault(userId);
+  const [pinOpen, setPinOpen] = useState(false);
   if (!merchant) return null;
 
   const showNudge = Boolean(decision?.showNudge && decision.offer) && !nudgeDismissed;
@@ -159,7 +163,7 @@ export function CheckoutScreen() {
         <div className="px-5 pb-3">
           <button
             type="button"
-            onClick={payNormally}
+            onClick={() => setPinOpen(true)}
             disabled={shortOnWallet || amount <= 0}
             className="w-full rounded-2xl bg-brand-deep py-3.5 text-[15px] font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-elevated disabled:text-faint"
           >
@@ -174,6 +178,17 @@ export function CheckoutScreen() {
 
         <Keypad onPress={press} deleteLabel={t('checkout.deleteDigit')} />
       </div>
+
+      <PinSheet
+        open={pinOpen}
+        amount={amount}
+        payee={merchant.name}
+        onClose={() => setPinOpen(false)}
+        onAuthorised={() => {
+          setPinOpen(false);
+          payNormally();
+        }}
+      />
     </div>
   );
 }
@@ -211,29 +226,6 @@ function EngineStrip() {
           Reset
         </button>
       ) : null}
-    </div>
-  );
-}
-
-function Keypad({ onPress, deleteLabel }: { onPress: (key: string) => void; deleteLabel: string }) {
-  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'back'];
-  return (
-    <div className="grid shrink-0 grid-cols-3 gap-px border-t border-line bg-line/40">
-      {keys.map((key, index) =>
-        key === '' ? (
-          <div key={index} className="bg-ink py-3" />
-        ) : (
-          <button
-            key={index}
-            type="button"
-            onClick={() => onPress(key)}
-            aria-label={key === 'back' ? deleteLabel : key}
-            className="bg-ink py-3 text-[19px] font-medium text-body transition active:bg-elevated"
-          >
-            {key === 'back' ? '⌫' : key}
-          </button>
-        ),
-      )}
     </div>
   );
 }
